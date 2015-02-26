@@ -25,7 +25,8 @@
         
         <header-file src="src/ios/FayeClient.h" />
         <source-file src="src/ios/FayeClient.m" />
-        <header-file src="src/ios/MZFayeClient.h" />
+	<!--
+	<header-file src="src/ios/MZFayeClient.h" />
         <source-file src="src/ios/MZFayeClient.m" />
         <header-file src="src/ios/MZFayeMessage.h" />
         <source-file src="src/ios/MZFayeMessage.m" />
@@ -34,7 +35,7 @@
 	<source-file src="src/ios/SRWebSocket.h" />
 	<source-file src="src/ios/SRWebSocket.m" />
 	<source-file src="src/ios/SocketRocket-Prefix.pch" />
-
+	-->
     </platform>
 
 </plugin>
