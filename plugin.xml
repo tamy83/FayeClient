@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    
+    id="com.monmouth.ytam"
+    version="0.1.0">
+    <name>FayeClient</name>
+    <description>Faye Phonegap Plugin for Faye objective C client, MZFayeClient</description>
+    <license>Apache 2.0</license>
+    <keywords>cordova,faye</keywords>
+<!--
+     add MZFayeClient and SocketRocket dependencies
+<dependency id="org.apache.cordova.device" url="https://github.com/apache/cordova-plugin-device.git" />
+ -->
+    
+    <js-module src="www/faye_client.js" name="FayeClient">
+        <clobbers target="navigator.FayeClient" />
+    </js-module>
+    
+    <!-- ios -->
+    <platform name="ios">
+        <config-file target="config.xml" parent="/*">
+            <feature name="FayeClient">
+                <param name="ios-package" value="FayeClient" />
+            </feature>
+        </config-file>
+        
+        <header-file src="src/ios/FayeClient.h" />
+        <source-file src="src/ios/FayeClient.m" />
+    </platform>
+
+</plugin>
