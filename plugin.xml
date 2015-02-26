@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
     xmlns:android="http://schemas.android.com/apk/res/android"
+    id="com.monmouth.fayeClient"
     version="0.1.0">
     <name>FayeClient</name>
     <description>Faye Phonegap Plugin for Faye objective C client, MZFayeClient</description>
