@@ -26,7 +26,6 @@
         
         <header-file src="src/ios/FayeClient.h" />
         <source-file src="src/ios/FayeClient.m" />
-	
 	<header-file src="src/ios/MZFayeClient.h" />
         <source-file src="src/ios/MZFayeClient.m" />
         <header-file src="src/ios/MZFayeMessage.h" />

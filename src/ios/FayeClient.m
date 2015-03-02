@@ -25,22 +25,38 @@
 
 - (void)init:(CDVInvokedUrlCommand *)command
 {
-    if([command.arguments count] > 0
-       && [[command argumentAtIndex:0] isKindOfClass:[NSString class]])
-    {
-        mzFayeClient = [[MZFayeClient alloc] initWithURL:[NSURL URLWithString:[command argumentAtIndex:0]]];
-    }
-}
+	NSLog("fayeClient obj c init with command: %@", [command argumentAtIndex:0]);
+	 /*
+	       if([command.arguments count] > 0
+	              && [[command argumentAtIndex:0] isKindOfClass:[NSString class]])
+	                  {
+	                         mzFayeClient = [[MZFayeClient alloc] initWithURL:[NSURL URLWithString:[command argumentAtIndex:0]]];
+	                                  mzFayeClient.delegate = mzFayeClient;
+	                                      }
+	                                       */
 
+}
 - (void)subscribe:(CDVInvokedUrlCommand *)command
 {
-    //[self setBackgroundSecondsWithSeconds:[NSNumber numberWithInteger:NSIntegerMax]];
+	 NSLog("fayeClient obj c subscribe with command: %@", [command argumentAtIndex:0]);
+	     /*
+	           if([command.arguments count] > 0
+	                  && [[command argumentAtIndex:0] isKindOfClass:[NSString class]])
+	                      {
+	                              [mzFayeClient subscribeToChannel:[command argumentAtIndex:0] usingBlock:^(NSDictionary *message) {
+	                                          NSLog(@"received msg in FayeClient obj c subscribe %@",message);
+	                                                      
+	                                                              }];
+	                                                                      [mzFayeClient connect];
+	                                                                          }
+	                                                                               */
+
 }
+
 
 - (void)publish:(CDVInvokedUrlCommand *)command
 {
-    
-    //[self setBackgroundSecondsWithSeconds:[NSNumber numberWithInteger:backgroundSecondsCounter]];
+	NSLog("fayeClient obj c publish with command: %@", [command argumentAtIndex:0]);    
 }
 
 @end
