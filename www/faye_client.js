@@ -16,8 +16,10 @@ FayeClient.init = function(address){
     window.plugins.FayeClient.PInvoke("init", address, function(){console.log('init success')}, function(){console.log('init error')});
 };
 
-FayeClient.subscribe = function(channel, callbackOK){
-    window.plugins.FayeClient.PInvoke("subscribe", channel, callbackOK, function(){console.log('subscribe error')});
+FayeClient.subscribe = function(channel, jsCommand){
+	console.log('fayeClient subscribe');
+	var args = [channel, jsCommand];
+    	window.plugins.FayeClient.PInvoke("subscribe", args, function(){console.log('subscribe success');}, function(){console.log('subscribe error')});
 };
 
 FayeClient.publish = function(channel, data){
