@@ -25,7 +25,7 @@
 
 - (void)init:(CDVInvokedUrlCommand *)command
 {
-	NSLog("fayeClient obj c init with command: %@", [command argumentAtIndex:0]);
+	NSLog(@"fayeClient obj c init with command: %@", [command argumentAtIndex:0]);
 	 /*
 	       if([command.arguments count] > 0
 	              && [[command argumentAtIndex:0] isKindOfClass:[NSString class]])
@@ -38,7 +38,7 @@
 }
 - (void)subscribe:(CDVInvokedUrlCommand *)command
 {
-	 NSLog("fayeClient obj c subscribe with command: %@", [command argumentAtIndex:0]);
+	 NSLog(@"fayeClient obj c subscribe with command: %@", [command argumentAtIndex:0]);
 	     /*
 	           if([command.arguments count] > 0
 	                  && [[command argumentAtIndex:0] isKindOfClass:[NSString class]])
@@ -56,7 +56,7 @@
 
 - (void)publish:(CDVInvokedUrlCommand *)command
 {
-	NSLog("fayeClient obj c publish with command: %@", [command argumentAtIndex:0]);    
+	NSLog(@"fayeClient obj c publish with command: %@", [command argumentAtIndex:0]);    
 }
 
 @end
