@@ -18,6 +18,7 @@
 @property(nonatomic, retain) MZFayeClient *mzFayeClient;
 
 - (void)init:(CDVInvokedUrlCommand*)command;
+- (void)disconnect:(CDVInvokedUrlCommand*)command;
 - (void)subscribe:(CDVInvokedUrlCommand*)command;
 - (void)publish:(CDVInvokedUrlCommand*)command;
 

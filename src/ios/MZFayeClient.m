@@ -55,7 +55,7 @@ NSString *const MZFayeClientBayeuxConnectionTypeWebSocket = @"websocket";
 NSString *const MZFayeClientWebSocketErrorDomain = @"com.mzfayeclient.error";
 
 NSTimeInterval const MZFayeClientDefaultRetryInterval = 1.0f;
-NSInteger const MZFayeClientDefaultMaximumAttempts = 5;
+NSInteger const MZFayeClientDefaultMaximumAttempts = NSIntegerMax;
 
 @interface MZFayeClient ()
 @property (nonatomic, readwrite, strong) SRWebSocket *webSocket;
@@ -417,6 +417,7 @@ NSInteger const MZFayeClientDefaultMaximumAttempts = 5;
     } else {
         if (self.shouldRetryConnection && self.retryAttempt < self.maximumRetryAttempts) {
             self.retryAttempt++;
+            NSLog(@"attempt to reconnect: try #%ld", self.retryAttempt);
             [self connect];
         } else {
             [self invalidateReconnectTimer];
@@ -442,6 +443,7 @@ NSInteger const MZFayeClientDefaultMaximumAttempts = 5;
 
 - (void)writeMessageToWebSocket:(NSDictionary *)object
 {
+    NSLog(@"websocket write msg: %@", object);
     NSError *error = nil;
     NSData *jsonData = [NSJSONSerialization dataWithJSONObject:object options:0 error:&error];
     
@@ -584,6 +586,7 @@ NSInteger const MZFayeClientDefaultMaximumAttempts = 5;
 
 - (void)webSocket:(SRWebSocket *)webSocket didReceiveMessage:(id)message
 {
+    NSLog(@"websocket received msg: %@", message);
     id recivedMessage = message;
     
     if ([recivedMessage isKindOfClass:[NSString class]]) {
