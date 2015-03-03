@@ -1,6 +1,6 @@
 //
-//  FayeClient.h
-//  FayeClient
+//  FayePG.h
+//  FayePG
 //
 //  Created by Yenson Tam on 2/25/15.
 //
@@ -11,7 +11,7 @@
 #import "MZFayeClient.h"
 
 
-@interface FayeClient : CDVPlugin {
+@interface FayePG : CDVPlugin {
     MZFayeClient *mzFayeClient;
 }
 
