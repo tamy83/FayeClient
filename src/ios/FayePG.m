@@ -43,9 +43,12 @@
 - (void)subscribe:(CDVInvokedUrlCommand *)command
 {
     NSLog(@"FayePG subscribe to channel: %@",[command argumentAtIndex:0]);
+    NSLog(@"FayePG callback: %@",[command argumentAtIndex:1]);
     
-    if([command.arguments count] > 0 && [[command argumentAtIndex:0] isKindOfClass:[NSString class]]) {
-        [mzFayeClient subscribeToChannel:[command argumentAtIndex:0] usingBlock:^(NSDictionary *message) {	                                          NSLog(@"received msg in FayePG obj c subscribe %@",message);
+    if([command.arguments count] > 0 && [[command argumentAtIndex:0] isKindOfClass:[NSString class]] && [[command argumentAtIndex:1] isKindOfClass:[NSString class]]) {
+        [mzFayeClient subscribeToChannel:[command argumentAtIndex:0] usingBlock:^(NSDictionary *message) {
+            NSLog(@"received msg in FayePG obj c subscribe %@",message);
+            NSLog(@"FayePG callback: %@",[command argumentAtIndex:1]);
             NSError *error;
             NSData *jsonData = [NSJSONSerialization dataWithJSONObject:message
                                                                options:0 // Pass 0 if you don't care about the readability of the generated string
@@ -54,7 +57,8 @@
                 NSLog(@"Got an error: %@", error);
             } else {
                 NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-                NSString *cmd = @"execute(";
+                NSString *cmd = [command argumentAtIndex:1];
+                cmd = [cmd stringByAppendingString:@"("];
                 cmd = [cmd stringByAppendingString:jsonString];
                 cmd = [cmd stringByAppendingString:@");"];
                 NSLog(@"cmd: %@",cmd);
@@ -66,9 +70,14 @@
 }
 
 
-- (void)publish:(CDVInvokedUrlCommand *)command
+- (void)sendMessage:(CDVInvokedUrlCommand *)command
 {
-	NSLog(@"fayePG obj c publish with command: %@", [command argumentAtIndex:0]);    
+	NSLog(@"fayePG obj c send message to channel: %@", [command argumentAtIndex:0]);
+  	NSLog(@"fayePG obj c send message with data: %@", [command argumentAtIndex:1]);
+    if([command.arguments count] > 0 && [[command argumentAtIndex:0] isKindOfClass:[NSString class]] && [[command argumentAtIndex:1] isKindOfClass:[NSDictionary class]]) {
+        [mzFayeClient sendMessage:[command argumentAtIndex:1] toChannel:[command argumentAtIndex:0]];
+    }
+
 }
 
 @end

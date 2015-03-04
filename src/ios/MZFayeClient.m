@@ -641,26 +641,31 @@ NSInteger const MZFayeClientDefaultMaximumAttempts = NSIntegerMax;
 }
 
 - (void)fayeClient:(MZFayeClient *)client didConnectToURL:(NSURL *)url {
-	    NSLog(@"connected to url %@", url);    
+	NSLog(@"connected to url %@", url);
 }
 - (void)fayeClient:(MZFayeClient *)client didDisconnectWithError:(NSError *)error {
-	    NSLog(@"disconnect with error: %@", error);
+	NSLog(@"disconnect with error: %@", error);
+   // [self reconnect];
 }
 - (void)fayeClient:(MZFayeClient *)client didUnsubscribeFromChannel:(NSString *)channel{
-	    NSLog(@"client %@ unsubscribed to %@", client, channel);
+	NSLog(@"client %@ unsubscribed to %@", client, channel);
 }
 - (void)fayeClient:(MZFayeClient *)client didSubscribeToChannel:(NSString *)channel {
-	    NSLog(@"client %@ subscribed to %@", client, channel);
+	NSLog(@"client %@ subscribed to %@", client, channel);
 }
 - (void)fayeClient:(MZFayeClient *)client didFailWithError:(NSError *)error {
-	    NSLog(@"client %@ failed with error: %@", client, error);
+    NSLog(@"client %@ failed with error: %@", client, error);
+  //  client = [[MZFayeClient alloc] initWithURL:self.url];
+  //  client.delegate = client;
+  //  [client connect];
+
 }
 - (void)fayeClient:(MZFayeClient *)client didFailDeserializeMessage:(NSDictionary *)message
          withError:(NSError *)error {
-		     NSLog(@"client %@ failed deserialized message: %@", client, message);
+    NSLog(@"client %@ failed deserialized message: %@", client, message);
 	 }
 - (void)fayeClient:(MZFayeClient *)client didReceiveMessage:(NSDictionary *)messageData fromChannel:(NSString *)channel {
-	    NSLog(@"client %@ received message %@ from %@", client, messageData, channel);
+	NSLog(@"client %@ received message %@ from %@", client, messageData, channel);
 }
 
 

@@ -20,14 +20,15 @@ FayePG.prototype.disconnect = function(){
 		  window.plugins.FayePG.PInvoke("disconnect", null, function(){console.log('disc success')}, function(){console.log('disc error')});
 };
 
-FayePG.prototype.subscribe = function(channel){
+FayePG.prototype.subscribe = function(channel, commandCallback){
 	console.log('fayePG subscribe');
-	window.plugins.FayePG.PInvoke("subscribe", channel, function(){console.log('subscribe success');}, function(){console.log('subscribe error')});
+  var args = [channel, commandCallback];
+	window.plugins.FayePG.PInvoke("subscribe", args, function(){console.log('subscribe success');}, function(){console.log('subscribe error')});
 };
 
-FayePG.prototype.publish = function(channel, data){
+FayePG.prototype.sendMessage = function(channel, data){
 	var args = [channel, data];
-	window.plugins.FayePG.PInvoke("publish", args, function(){console.log('publish success')}, function(){console.log('publish error')});
+	window.plugins.FayePG.PInvoke("sendMessage", args, function(){console.log('publish success')}, function(){console.log('publish error')});
 };
 
 cordova.addConstructor(function() {
