@@ -1,37 +1,68 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    id="com.monmouth.fayePG"
-    version="0.1.0">
-    <name>FayePG</name>
-    <description>Faye Phonegap Plugin for MTT app</description>
-    <license>Apache 2.0</license>
-    <keywords>cordova,faye</keywords>
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  id="com.monmouth.fayePG"
+  version="0.1.0">
+  <name>FayePG</name>
+  <description>Faye Phonegap Plugin for MTT app</description>
+  <license>Apache 2.0</license>
+  <keywords>cordova,faye</keywords>
+   
+  <js-module src="www/fayePG.js" name="FayePG">
+  	<clobbers target="FayePG" />
+  </js-module>
     
-    <js-module src="www/fayePG.js" name="FayePG">
-        <clobbers target="FayePG" />
-    </js-module>
-    
-    <!-- ios -->
-    <platform name="ios">
-        <config-file target="config.xml" parent="/*">
-            <feature name="FayePG">
-                <param name="ios-package" value="FayePG" />
-            </feature>
-        </config-file>
+  <!-- ios -->
+  <platform name="ios">
+  	<config-file target="config.xml" parent="/*">
+    	<feature name="FayePG">
+      	<param name="ios-package" value="FayePG" />
+      </feature>
+    </config-file>
         
-        <header-file src="src/ios/FayePG.h" />
-        <source-file src="src/ios/FayePG.m" />
-				<header-file src="src/ios/MZFayeClient.h" />
-        <source-file src="src/ios/MZFayeClient.m" />
-        <header-file src="src/ios/MZFayeMessage.h" />
-        <source-file src="src/ios/MZFayeMessage.m" />
-        <header-file src="src/ios/MF_Base64Additions.h" />
-        <source-file src="src/ios/MF_Base64Additions.m" />
-				<source-file src="src/ios/SRWebSocket.h" />
-				<source-file src="src/ios/SRWebSocket.m" />
-				<source-file src="src/ios/SocketRocket-Prefix.pch" />
+	<header-file src="src/ios/FayePG.h" />
+	<source-file src="src/ios/FayePG.m" />
+	<header-file src="src/ios/MZFayeClient.h" />
+  <source-file src="src/ios/MZFayeClient.m" />
+  <header-file src="src/ios/MZFayeMessage.h" />
+  <source-file src="src/ios/MZFayeMessage.m" />
+  <header-file src="src/ios/MF_Base64Additions.h" />
+  <source-file src="src/ios/MF_Base64Additions.m" />
+	<source-file src="src/ios/SRWebSocket.h" />
+	<source-file src="src/ios/SRWebSocket.m" />
+	<source-file src="src/ios/SocketRocket-Prefix.pch" />
 	
-    </platform>
+  </platform>
+
+	<!-- android -->
+	<platform name="android">
+		<config-file target="res/xml/config.xml" parent="/*">
+			<feature name="FayePG">
+				<param name="android-package" value="com.monmouth.fayePG.FayePG" />
+			</feature>
+		</config-file>
+
+		<config-file target="AndroidManifest.xml" parent="/*">
+			<uses-permission android:name="android.permission.READ_CONTACTS" />
+			<uses-permission android:name="android.permission.WRITE_CONTACTS" />
+
+			<service android:name=".shared.Services.FayeService" />
+
+			<!-- com.saulpower.fayeclient -->
+			<uses-sdk 
+				android:minSdkVersion="7"
+				android:targetSdkVersion="17" />
+			<uses-permission android:name="android.permission.INTERNET" />
+		</config-file>
+
+		<source-file src="src/android/FayePG.java" target-dir="src/com/monmouth/fayePG" />
+		<source-file src="src/android/FayeService.java" target-dir="src/com/monmouth/fayePG" />
+		<source-file src="src/android/com.saulpower.fayeclient/Base64.java" target-dir="src/com/saulpower/fayeclient" />
+		<source-file src="src/android/com.saulpower.fayeclient/FayeClient.java" target-dir="src/com/saulpower/fayeclient" />
+		<source-file src="src/android/com.saulpower.fayeclient/HybiParser.java" target-dir="src/com/saulpower/fayeclient" />
+		<source-file src="src/android/com.saulpower.fayeclient/WebSocketClient.java" target-dir="src/com/saulpower/fayeclient" />
+	</platform>
+
+
 
 </plugin>

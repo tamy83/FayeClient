@@ -27,8 +27,12 @@
 {
     NSLog(@"fayePG init with url: %@",[command argumentAtIndex:0]);
     if([command.arguments count] > 0 && [[command argumentAtIndex:0] isKindOfClass:[NSString class]]) {
-        mzFayeClient = [[MZFayeClient alloc] initWithURL:[NSURL URLWithString:[command argumentAtIndex:0]]];
-        mzFayeClient.delegate = mzFayeClient;
+        self.url = [command argumentAtIndex:0];
+        if (mzFayeClient == nil) {
+            mzFayeClient = [[MZFayeClient alloc] initWithURL:[NSURL URLWithString:self.url]];
+            mzFayeClient.delegate = mzFayeClient;
+            mzFayeClient.shouldRetryConnection = true;
+        }
         [mzFayeClient connect];
     }
 }
@@ -37,7 +41,9 @@
    NSLog(@"fayePG objc disconnect call");
    if (mzFayeClient != nil) {
        NSLog(@"fayePG objc disconnecting");
+       mzFayeClient.shouldRetryConnection = false;
        [mzFayeClient disconnect];
+       self.url = nil;
    }
 }
 - (void)subscribe:(CDVInvokedUrlCommand *)command

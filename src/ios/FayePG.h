@@ -16,6 +16,7 @@
 }
 
 @property(nonatomic, retain) MZFayeClient *mzFayeClient;
+@property (nonatomic, strong) NSString *url;
 
 - (void)init:(CDVInvokedUrlCommand*)command;
 - (void)disconnect:(CDVInvokedUrlCommand*)command;
