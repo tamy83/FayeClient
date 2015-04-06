@@ -11,16 +11,37 @@ import org.json.JSONObject;
 import java.net.URI;
 import android.os.Looper;
 import android.os.Handler;
+import android.os.IBinder;
+import android.os.Binder;
+import org.apache.cordova.CordovaPlugin;
+import org.apache.cordova.CallbackContext;
+import com.monmouth.fayePG.FayePG;
 
 public class FayeService extends IntentService implements FayeListener {
 
-    private static final String LOG_TAG = "FayeService";
+    private static final String LOG_TAG = "Faye";
 
-    FayeClient mClient;
+    private Handler mHandler;
+    private FayeClient mClient;
+    private FayePG fayePG;
 
     public FayeService() {
         super("FayeService");
     }
+
+    public class FayeBinder extends Binder {
+        FayeService getService() {
+            return FayeService.this;
+        }
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return mBinder;
+    }
+
+    private final IBinder mBinder = new FayeBinder();
+
 
     @Override
     protected void onHandleIntent(Intent intent) {
@@ -37,14 +58,54 @@ public class FayeService extends IntentService implements FayeListener {
             URI uri = URI.create(address);
 
             JSONObject ext = new JSONObject();
-            // no need to implement authentication
-            ext.put("authToken", "");
+            ext.put("user", intent.getStringExtra("user"));
+            ext.put("sid", intent.getStringExtra("sid"));
 
-            mClient = new FayeClient(new Handler(Looper.getMainLooper()), uri, channel);
+            if (mHandler == null) {
+                mHandler = new Handler(Looper.getMainLooper());
+            }
+            mClient = new FayeClient(mHandler, uri, channel);
+            if (fayePG != null) {
+                Log.i(LOG_TAG, "fayePG is not null when starting service");
+            }
+            //mClient.setFayeListener(fayePG);
             mClient.setFayeListener(this);
             mClient.connectToServer(ext);
 
+
         } catch (JSONException ex) {}
+        Log.i(LOG_TAG, "onHandleIntent returns");
+
+    }
+
+    public void disconnect() {
+        Log.i(LOG_TAG, "FayeService disconnect");
+        if (mClient != null) {
+            mClient.setShouldRetryConnection(false);
+            mClient.disconnectFromServer();
+        }
+    }
+
+    public void sendMessage(String channel, JSONObject data) {
+        if (mClient != null)
+            mClient.sendMessage(channel, data);
+    }
+
+    void setFayeListener(FayeListener fayeListener) {
+        if (fayeListener instanceof FayePG) {
+            Log.i(LOG_TAG, "FayeService setfayelister to fayePG");
+            fayePG = (FayePG) fayeListener;
+        }
+    }
+
+    void setFaye(FayePG fayePG) {
+        this.fayePG = fayePG;
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        Log.i(LOG_TAG, "onDestroy() fayeService");
     }
 
     @Override
@@ -55,12 +116,14 @@ public class FayeService extends IntentService implements FayeListener {
     @Override
     public void onStart(Intent intent, int startId) {
         super.onStart(intent, startId);
+        Log.i(LOG_TAG, "onStart() fayeService");
     }
 
-    @Override
+    @Override // returned value here affects how android restarts this service
     public int onStartCommand(Intent intent, int flags, int startId) {
         return super.onStartCommand(intent, flags, startId);
     }
+
 
     @Override
     public void connectedToServer() {
@@ -69,7 +132,7 @@ public class FayeService extends IntentService implements FayeListener {
 
     @Override
     public void disconnectedFromServer() {
-        Log.i(LOG_TAG, "Disonnected to Server");
+        Log.i(LOG_TAG, "Disconnected from Server");
     }
 
     @Override
@@ -83,7 +146,18 @@ public class FayeService extends IntentService implements FayeListener {
     }
 
     @Override
-    public void messageReceived(JSONObject json) {
-        Log.i(LOG_TAG, String.format("Received message %s", json.toString()));
+    public void messageReceived(final JSONObject json) {
+        Log.i(LOG_TAG, String.format("Received message in fayeService %s", json.toString()));
+        // call javascript command here and pass json
+        Runnable r = new Runnable() {
+            @Override
+            public void run() {
+                fayePG.webView.loadUrl("javascript:execute(" + json.toString() + ");");
+                //fayePG.webView.evaluateJavascript("javascript:execute("+json.toString()+");", null);
+            }
+        };
+        mHandler.post(r);
+
     }
+
 }
