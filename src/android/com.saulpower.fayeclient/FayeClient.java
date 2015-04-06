@@ -64,11 +64,13 @@ public class FayeClient implements Listener {
     private static final String VALUE_CONN_TYPE         = "websocket";
 
     private static final long RECONNECT_WAIT            = 10000;
-    private static final int MAX_CONNECTION_ATTEMPTS    = 3;
+    private static final int MAX_CONNECTION_ATTEMPTS    = Integer.MAX_VALUE;
 
     private WebSocketClient mClient;
     private boolean mConnected = false;
     private int mConnectionAttempts = 0;
+
+    private boolean shouldRetryConnection = true;
 
     private URI mFayeUrl;
     private String mFayeClientId;
@@ -89,8 +91,9 @@ public class FayeClient implements Listener {
 
                 openWebSocketConnection();
 
-                if (mConnectionAttempts < MAX_CONNECTION_ATTEMPTS) {
+                if (shouldRetryConnection && (mConnectionAttempts < MAX_CONNECTION_ATTEMPTS)) {
                     mConnectionAttempts++;
+                    Log.i(TAG, "attempt to reconect: try #" + mConnectionAttempts);
                     getHandler().postDelayed(this, RECONNECT_WAIT);
                 }
 
@@ -135,6 +138,14 @@ public class FayeClient implements Listener {
         mActiveSubChannel = channel;
     }
 
+    public boolean isShouldRetryConnection() {
+        return shouldRetryConnection;
+    }
+
+    public void setShouldRetryConnection(boolean shouldRetryConnection) {
+        this.shouldRetryConnection = shouldRetryConnection;
+    }
+
     /**
      * Connect to a server using the extension authentication object
      *
@@ -157,8 +168,8 @@ public class FayeClient implements Listener {
      * @param json
      *            JSON object containing message to be sent to server
      */
-    public void sendMessage(JSONObject json) {
-        publish(json, mConnectionExtension);
+    public void sendMessage(String channel, JSONObject json) {
+        publish(channel, json, mConnectionExtension);
     }
 
     private void openWebSocketConnection() {
@@ -359,9 +370,8 @@ public class FayeClient implements Listener {
      *            Bayeux extension authentication that exchanges authentication
      *            credentials and tokens within Bayeux messages ext fields
      */
-    public void publish(JSONObject message, JSONObject extension) {
+    public void publish(String channel, JSONObject message, JSONObject extension) {
 
-        String channel        = mActiveSubChannel;
         long number            = (new Date()).getTime();
         String messageId    = String.format("msg_%d_%d", number, 1);
 
