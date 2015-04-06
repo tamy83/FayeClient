@@ -26,16 +26,36 @@
 - (void)init:(CDVInvokedUrlCommand *)command
 {
     NSLog(@"fayePG init with url: %@",[command argumentAtIndex:0]);
-    if([command.arguments count] > 0 && [[command argumentAtIndex:0] isKindOfClass:[NSString class]]) {
+    if([command.arguments count] > 0 && [[command argumentAtIndex:0] isKindOfClass:[NSString class]] && [[command argumentAtIndex:1] isKindOfClass:[NSString class]]) {
         self.url = [command argumentAtIndex:0];
+        NSString *credString = [command argumentAtIndex:1];
+                            
+        [self setAuthTokenFromString:credString];
         if (mzFayeClient == nil) {
             mzFayeClient = [[MZFayeClient alloc] initWithURL:[NSURL URLWithString:self.url]];
             mzFayeClient.delegate = mzFayeClient;
             mzFayeClient.shouldRetryConnection = true;
         }
+        NSString *channel = @"/";
+        channel = [channel stringByAppendingString:[self.authToken objectForKey:@"user"]];
+        [mzFayeClient setExtension:self.authToken forChannel:channel];
         [mzFayeClient connect];
+        NSLog(@"connected: %s", mzFayeClient.isConnected ? "true" : "false");
+
     }
 }
+
+// user:sid
+- (void)setAuthTokenFromString:(NSString *) credentialsString
+{
+    NSArray *keys = [NSArray arrayWithObjects:@"user", @"sid", nil];
+    NSString *user = [[credentialsString componentsSeparatedByString:@":"] objectAtIndex:0];
+    NSString *sid = [[credentialsString componentsSeparatedByString:@":"] objectAtIndex:1];
+    NSArray *credentials = [NSArray arrayWithObjects:user, sid, nil];
+    
+    self.authToken = [NSDictionary dictionaryWithObjects:credentials forKeys:keys];
+}
+
 - (void)disconnect:(CDVInvokedUrlCommand *)command
 {
    NSLog(@"fayePG objc disconnect call");
@@ -81,7 +101,8 @@
 	NSLog(@"fayePG obj c send message to channel: %@", [command argumentAtIndex:0]);
   	NSLog(@"fayePG obj c send message with data: %@", [command argumentAtIndex:1]);
     if([command.arguments count] > 0 && [[command argumentAtIndex:0] isKindOfClass:[NSString class]] && [[command argumentAtIndex:1] isKindOfClass:[NSDictionary class]]) {
-        [mzFayeClient sendMessage:[command argumentAtIndex:1] toChannel:[command argumentAtIndex:0]];
+        [mzFayeClient sendMessage:[command argumentAtIndex:1] toChannel:[command argumentAtIndex:0] usingExtension:self.authToken];
+//        [mzFayeClient sendMessage:[command argumentAtIndex:1] toChannel:[command argumentAtIndex:0]];
     }
 
 }

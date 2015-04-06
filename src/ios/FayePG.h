@@ -17,10 +17,12 @@
 
 @property(nonatomic, retain) MZFayeClient *mzFayeClient;
 @property (nonatomic, strong) NSString *url;
+@property (nonatomic, strong) NSDictionary *authToken;
 
 - (void)init:(CDVInvokedUrlCommand*)command;
 - (void)disconnect:(CDVInvokedUrlCommand*)command;
 - (void)subscribe:(CDVInvokedUrlCommand*)command;
 - (void)sendMessage:(CDVInvokedUrlCommand*)command;
+- (void)setAuthTokenFromString:(NSString *)credentialsString;
 
 @end
