@@ -32,7 +32,8 @@ package com.saulpower.fayeclient;
 
 public class WebSocketClient {
 
-    private static final String TAG = "WebSocketClient";
+    //private static final String TAG = "WebSocketClient";
+    private static final String TAG = "Faye";
     private static TrustManager[] sTrustManagers;
     private final Object mSendLock = new Object();
     private URI mURI;
@@ -224,6 +225,7 @@ public class WebSocketClient {
                     }
                 }
             });
+            mHandlerThread.quitSafely();
         }
     }
 

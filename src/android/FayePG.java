@@ -11,8 +11,13 @@ import android.content.ServiceConnection;
 import android.content.ComponentName;
 import android.content.Context;
 import android.os.IBinder;
+import android.os.Environment;
+import java.util.Date;
+import java.text.SimpleDateFormat;
 
 import com.saulpower.fayeclient.FayeClient;
+
+import java.io.IOException;
 
 public class FayePG extends CordovaPlugin {
 
@@ -29,6 +34,15 @@ public class FayePG extends CordovaPlugin {
 
     public FayePG() {
         //intent = new Intent(this.cordova.getActivity().getApplicationContext(), FayeService.class);
+        String timeStamp = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(new Date());
+        String filePath = Environment.getExternalStorageDirectory() + "/MTTlog" + timeStamp + ".txt";
+        try {
+            //Runtime.getRuntime().exec(new String[]{"logcat", "-v", "time", "-f", filePath});
+            Runtime.getRuntime().exec(new String[]{"logcat", "-f", filePath, "-v", "time"/*, "Faye:V", "*:S"*/});
+        } catch (IOException e) {
+            Log.i(LOG_TAG, e.getMessage());
+        }
+
 
     }
 

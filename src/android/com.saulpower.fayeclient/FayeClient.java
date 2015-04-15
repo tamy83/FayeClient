@@ -38,7 +38,8 @@
 
 public class FayeClient implements Listener {
 
-    private final String TAG = this.getClass().getSimpleName();
+    //private final String TAG = this.getClass().getSimpleName();
+    private final String TAG = "Faye";
 
     private static final String HANDSHAKE_CHANNEL       = "/meta/handshake";
     private static final String CONNECT_CHANNEL         = "/meta/connect";
@@ -66,6 +67,10 @@ public class FayeClient implements Listener {
     private static final long RECONNECT_WAIT            = 10000;
     private static final int MAX_CONNECTION_ATTEMPTS    = Integer.MAX_VALUE;
 
+    private int keepAliveInterval                      = 600000;
+    private String keepAliveChannel;
+    private JSONObject keepAliveMessage;
+
     private WebSocketClient mClient;
     private boolean mConnected = false;
     private int mConnectionAttempts = 0;
@@ -82,6 +87,22 @@ public class FayeClient implements Listener {
     private boolean mReconnecting = false;
 
     private Handler mHandler;
+
+    private Runnable mKeepAliveTask = new Runnable() {
+        @Override
+        public void run() {
+            /*
+            if ((keepAliveChannel != null) && !(keepAliveChannel.equals(""))) {
+                if (mRunning) {
+                    sendMessage(keepAliveChannel, keepAliveMessage);
+                    getHandler().postDelayed(this, keepAliveInterval);
+                } else {
+                    getHandler().removeCallbacks(this);
+                }
+            }
+*/
+        }
+    };
     private Runnable mConnectionMonitor = new Runnable() {
 
         @Override
@@ -90,10 +111,10 @@ public class FayeClient implements Listener {
             if (!mConnected) {
 
                 openWebSocketConnection();
-
-                if (shouldRetryConnection && (mConnectionAttempts < MAX_CONNECTION_ATTEMPTS)) {
+                if (/*shouldRetryConnection && */(mConnectionAttempts < MAX_CONNECTION_ATTEMPTS)) {
                     mConnectionAttempts++;
-                    Log.i(TAG, "attempt to reconect: try #" + mConnectionAttempts);
+                    Log.i(TAG, "attempting to reconnect: try #" + mConnectionAttempts);
+
                     getHandler().postDelayed(this, RECONNECT_WAIT);
                 }
 
@@ -146,6 +167,30 @@ public class FayeClient implements Listener {
         this.shouldRetryConnection = shouldRetryConnection;
     }
 
+    public int getKeepAliveInterval() {
+        return keepAliveInterval;
+    }
+
+    public void setKeepAliveInterval(int keepAliveInterval) {
+        this.keepAliveInterval = keepAliveInterval;
+    }
+
+    public JSONObject getKeepAliveMessage() {
+        return keepAliveMessage;
+    }
+
+    public void setKeepAliveMessage(JSONObject keepAliveMessage) {
+        this.keepAliveMessage = keepAliveMessage;
+    }
+
+    public String getKeepAliveChannel() {
+        return keepAliveChannel;
+    }
+
+    public void setKeepAliveChannel(String keepAliveChannel) {
+        this.keepAliveChannel = keepAliveChannel;
+    }
+
     /**
      * Connect to a server using the extension authentication object
      *
@@ -155,10 +200,13 @@ public class FayeClient implements Listener {
      */
     public void connectToServer(JSONObject extension) {
         mConnectionExtension = extension;
+        mRunning = true;
         openWebSocketConnection();
+        getHandler().postDelayed(mKeepAliveTask, keepAliveInterval);
     }
 
     public void disconnectFromServer() {
+        mRunning = false;
         disconnect();
     }
 
@@ -193,10 +241,7 @@ public class FayeClient implements Listener {
     private void resetWebSocketConnection() {
 
         if (!mConnected) {
-
-            if (!mRunning) {
-                getHandler().post(mConnectionMonitor);
-            }
+            getHandler().post(mConnectionMonitor);
         }
     }
 

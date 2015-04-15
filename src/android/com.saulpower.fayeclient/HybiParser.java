@@ -42,7 +42,8 @@
 
 public class HybiParser {
 
-    private static final String TAG = "HybiParser";
+    //private static final String TAG = "HybiParser";
+    private static final String TAG = "Faye";
 
     private WebSocketClient mClient;
 

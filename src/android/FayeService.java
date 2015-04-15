@@ -16,6 +16,7 @@ import android.os.Binder;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
 import com.monmouth.fayePG.FayePG;
+import android.util.LogPrinter;
 
 public class FayeService extends IntentService implements FayeListener {
 
@@ -24,6 +25,7 @@ public class FayeService extends IntentService implements FayeListener {
     private Handler mHandler;
     private FayeClient mClient;
     private FayePG fayePG;
+
 
     public FayeService() {
         super("FayeService");
@@ -57,17 +59,24 @@ public class FayeService extends IntentService implements FayeListener {
 
             URI uri = URI.create(address);
 
+            String user = intent.getStringExtra("user");
+            String sid = intent.getStringExtra("sid");
+
             JSONObject ext = new JSONObject();
-            ext.put("user", intent.getStringExtra("user"));
-            ext.put("sid", intent.getStringExtra("sid"));
+            ext.put("user", user);
+            ext.put("sid", sid);
 
             if (mHandler == null) {
                 mHandler = new Handler(Looper.getMainLooper());
             }
             mClient = new FayeClient(mHandler, uri, channel);
-            if (fayePG != null) {
-                Log.i(LOG_TAG, "fayePG is not null when starting service");
-            }
+
+            JSONObject keepAliveMsg = new JSONObject();
+            keepAliveMsg.put("user", user);
+
+            mClient.setKeepAliveChannel("/keepAlive");
+            mClient.setKeepAliveMessage(keepAliveMsg);
+
             //mClient.setFayeListener(fayePG);
             mClient.setFayeListener(this);
             mClient.connectToServer(ext);
@@ -148,10 +157,14 @@ public class FayeService extends IntentService implements FayeListener {
     @Override
     public void messageReceived(final JSONObject json) {
         Log.i(LOG_TAG, String.format("Received message in fayeService %s", json.toString()));
+        // deprecated
+        //fayePG.webView.sendJavascript("execute(" + json.toString() + ");");
+//        Looper.getMainLooper().setMessageLogging(new LogPrinter(Log.VERBOSE, "Faye"));
         // call javascript command here and pass json
         Runnable r = new Runnable() {
             @Override
             public void run() {
+
                 fayePG.webView.loadUrl("javascript:execute(" + json.toString() + ");");
                 //fayePG.webView.evaluateJavascript("javascript:execute("+json.toString()+");", null);
             }
