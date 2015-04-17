@@ -14,14 +14,26 @@ import android.os.IBinder;
 import android.os.Environment;
 import java.util.Date;
 import java.text.SimpleDateFormat;
-
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.support.v4.app.NotificationCompat;
+import android.app.PendingIntent;
 import com.saulpower.fayeclient.FayeClient;
 
 import java.io.IOException;
 
 public class FayePG extends CordovaPlugin {
 
-    private static final String LOG_TAG = "Faye";
+    private static final String LOG_TAG                     = "Faye";
+
+    private static final boolean DEBUG_MODE                 = true;
+    private static final String LOG_FILE                    = "mttlog";
+    private static final String APP_PACKAGE                 = "com.monmouth.monmouthtelecom";
+    private static final String NOTIF_ICON                  = "icon_notification";
+    private static final String NOTIF_ICON_TYPE             = "drawable";
+    private static final String NOTIF_TITLE                 = "Monmouth Telecom";
+    private static final String NOTIF_TEXT                  = "Call forward activated.";
+    private static final int NOTIF_ICON_ID                  = 1;
 
     private String address;
     private String channel;
@@ -33,42 +45,12 @@ public class FayePG extends CordovaPlugin {
     private boolean fayeIsBound;
 
     public FayePG() {
-        //intent = new Intent(this.cordova.getActivity().getApplicationContext(), FayeService.class);
-        String timeStamp = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(new Date());
-        String filePath = Environment.getExternalStorageDirectory() + "/MTTlog" + timeStamp + ".txt";
-        try {
-            //Runtime.getRuntime().exec(new String[]{"logcat", "-v", "time", "-f", filePath});
-            Runtime.getRuntime().exec(new String[]{"logcat", "-f", filePath, "-v", "time"/*, "Faye:V", "*:S"*/});
-        } catch (IOException e) {
-            Log.i(LOG_TAG, e.getMessage());
-        }
-
-
+        if (DEBUG_MODE)
+            logToFile();
     }
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
-
-/*
-        switch (action) {
-            case "init":
-                String address = args.getString(0);
-                this.init(address, callbackContext);
-                break;
-            case "disc":
-                break;
-            case "subscribe":
-                String channel = args.getString(0);
-                String command = args.getString(1);
-                this.subscribe(channel, command, callbackContext);
-                break;
-            case "sendMessage":
-                break;
-            default:
-                return false;
-        }
-*/
-
         if (action.equals("init")){
             String address = args.getString(0);
             String credentials = args.getString(1);
@@ -97,26 +79,11 @@ public class FayePG extends CordovaPlugin {
 
     private void init(String address, String user, String sid, CallbackContext callbackContext) {
         if ((address != null && address.length() > 0) && (user != null && user.length() > 0) && (sid != null && sid.length() > 0)) {
-          //  intent.putExtra("address",address);
             this.address = address;
             this.user = user;
             this.sid= sid;
             Log.i(LOG_TAG, "address: " + this.address + " user: " + this.user + " sid: " + this.sid);
-            /*
-            if (!fayeIsBound) {
-                Log.i(LOG_TAG, "FayePG init: fayeService is null");
-                intent = new Intent(this.cordova.getActivity().getApplicationContext(), FayeService.class);
-                intent.putExtra("address", address);
-                intent.putExtra("user", user);
-                intent.putExtra("sid", sid);
-                doBindService();
-                Log.i(LOG_TAG, "faye address: " + address);
-                callbackContext.success();
-            } else {
-                Log.i(LOG_TAG, "FayePG subscribe: Already subscribed to faye.");
-                callbackContext.error("Already subscribed to faye.");
-            }
-            */
+            callbackContext.success();
         } else {
             callbackContext.error("Invalid argument(s).");
         }
@@ -134,30 +101,27 @@ public class FayePG extends CordovaPlugin {
         if (channel == null || channel.length() == 0 || command == null) {
             callbackContext.error("Expected one non-empty string argument.");
         } else if (address != null && address.length() != 0 && user != null && user.length() != 0 && sid != null && sid.length() != 0) {
+
+            this.channel = channel;
+            this.command = command;
+            intent = new Intent(this.cordova.getActivity().getApplicationContext(), FayeService.class);
+            intent.putExtra("address", address);
+            intent.putExtra("user", user);
+            intent.putExtra("sid", sid);
+            intent.putExtra("channel", this.channel);
+            intent.putExtra("command", this.command);
+
             if (!fayeIsBound) {
-                this.channel = channel;
-                this.command = command;
-                Log.i(LOG_TAG, "FayePG subscribe: fayeService is null");
-                intent = new Intent(this.cordova.getActivity().getApplicationContext(), FayeService.class);
-                intent.putExtra("address", address);
-                intent.putExtra("user", user);
-                intent.putExtra("sid", sid);
-                intent.putExtra("channel", this.channel);
-                intent.putExtra("command", this.command);
                 doBindService();
                 this.cordova.getActivity().getApplicationContext().startService(intent);
-                Log.i(LOG_TAG, "faye address: " + address);
                 Log.i(LOG_TAG, "subscribe to: " + this.channel + " with command: " + this.command);
-
-                callbackContext.success();
             } else {
-                Log.i(LOG_TAG, "FayePG subscribe: Already subscribed to faye.");
-                callbackContext.error("Already subscribed to faye.");
+                callbackContext.success("Already subscribed.");
             }
+            callbackContext.success();
         } else {
             callbackContext.error("Need to init before trying to subscribe.");
         }
-
     }
 
     private void sendMessage(String channel, JSONObject data, CallbackContext callbackContext) {
@@ -208,7 +172,7 @@ public class FayePG extends CordovaPlugin {
     @Override
     public void onPause(boolean multitasking) {
         super.onPause(true);
-        Log.i(LOG_TAG, "fayePG onPause called");
+        Log.i(LOG_TAG, "fayePG onPause called w/multitasking " + multitasking);
     }
 
     /**
@@ -228,7 +192,6 @@ public class FayePG extends CordovaPlugin {
      */
     public void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        Log.i(LOG_TAG, "fayePG onNewIntent called w/intent " + intent.toString());
     }
 
     /**
@@ -237,7 +200,56 @@ public class FayePG extends CordovaPlugin {
     public void onDestroy() {
         super.onDestroy();
         Log.i(LOG_TAG, "fayePG onDestroy called");
+        removeNotification();
     }
 
+    public void removeNotification() {
+        NotificationManager mNotificationManager =
+                (NotificationManager) this.cordova.getActivity().getSystemService(Context.NOTIFICATION_SERVICE);
+        mNotificationManager.cancel(NOTIF_ICON_ID);
+    }
 
+    public void displayNotification() {
+
+        try {
+            int icon = this.cordova.getActivity().getResources().getIdentifier(NOTIF_ICON, NOTIF_ICON_TYPE, APP_PACKAGE);
+            if (icon == 0)
+                Log.i(LOG_TAG, "notification icon not found");
+
+            Intent notifIntent = new Intent(this.cordova.getActivity().getApplicationContext(),
+                    Class.forName(this.cordova.getActivity().getComponentName().getClassName()));
+            notifIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+            PendingIntent pendingIntent = PendingIntent.getActivity(this.cordova.getActivity().getApplicationContext(),
+                    0, notifIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+            NotificationCompat.Builder mBuilder =
+                    new NotificationCompat.Builder(this.cordova.getActivity().getApplicationContext())
+                            .setSmallIcon(icon)
+                            .setContentTitle(NOTIF_TITLE)
+                            .setContentText(NOTIF_TEXT)
+                            .setOngoing(true)
+                            .setContentIntent(pendingIntent);
+
+            Notification notif = mBuilder.build();
+            NotificationManager mNotificationManager =
+                    (NotificationManager) this.cordova.getActivity().getSystemService(Context.NOTIFICATION_SERVICE);
+
+            mNotificationManager.notify(NOTIF_ICON_ID, notif);
+        } catch (ClassNotFoundException ex) {
+            Log.e(LOG_TAG, "Error: Can't find class of cordova activity!");
+        }
+
+    }
+
+    private void logToFile() {
+        String timeStamp = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(new Date());
+        String filePath = Environment.getExternalStorageDirectory() + "/" + LOG_FILE + timeStamp + ".txt";
+        try {
+            Runtime.getRuntime().exec(new String[]{"logcat", "-f", filePath, "-v", "time"});
+        } catch (IOException e) {
+            Log.e(LOG_TAG, e.getMessage());
+        }
+    }
 }

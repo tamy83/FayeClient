@@ -225,7 +225,6 @@ public class WebSocketClient {
                     }
                 }
             });
-            mHandlerThread.quitSafely();
         }
     }
 

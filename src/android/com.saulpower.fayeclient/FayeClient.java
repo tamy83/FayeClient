@@ -91,7 +91,7 @@ public class FayeClient implements Listener {
     private Runnable mKeepAliveTask = new Runnable() {
         @Override
         public void run() {
-            /*
+
             if ((keepAliveChannel != null) && !(keepAliveChannel.equals(""))) {
                 if (mRunning) {
                     sendMessage(keepAliveChannel, keepAliveMessage);
@@ -100,9 +100,9 @@ public class FayeClient implements Listener {
                     getHandler().removeCallbacks(this);
                 }
             }
-*/
         }
     };
+
     private Runnable mConnectionMonitor = new Runnable() {
 
         @Override
@@ -110,8 +110,8 @@ public class FayeClient implements Listener {
 
             if (!mConnected) {
 
-                openWebSocketConnection();
-                if (/*shouldRetryConnection && */(mConnectionAttempts < MAX_CONNECTION_ATTEMPTS)) {
+                if (shouldRetryConnection && (mConnectionAttempts < MAX_CONNECTION_ATTEMPTS)) {
+                    openWebSocketConnection();
                     mConnectionAttempts++;
                     Log.i(TAG, "attempting to reconnect: try #" + mConnectionAttempts);
 
@@ -119,9 +119,7 @@ public class FayeClient implements Listener {
                 }
 
             } else {
-
                 getHandler().removeCallbacks(this);
-                mRunning = false;
                 mConnectionAttempts = 0;
                 mReconnecting = false;
             }
@@ -449,6 +447,10 @@ public class FayeClient implements Listener {
         mConnected = true;
         mReconnecting = false;
         handshake();
+        if (mFayeListener != null) {
+            mFayeListener.onConnectionChanged(true);
+        }
+
     }
 
     /*
@@ -478,6 +480,9 @@ public class FayeClient implements Listener {
     public void onDisconnect(int code, String reason) {
 
         mConnected = false;
+        if (mFayeListener != null) {
+            mFayeListener.onConnectionChanged(false);
+        }
 
         if (mFayeListener != null) {
             mFayeListener.disconnectedFromServer();
@@ -497,6 +502,9 @@ public class FayeClient implements Listener {
 
             mReconnecting = true;
             mConnected = false;
+            if (mFayeListener != null) {
+                mFayeListener.onConnectionChanged(false);
+            }
 
             resetWebSocketConnection();
         }
@@ -547,6 +555,9 @@ public class FayeClient implements Listener {
 
                         mConnected = true;
                         connect();
+                        if (mFayeListener != null) {
+                            mFayeListener.onConnectionChanged(true);
+                        }
 
                     } // else if (BuildConfig.DEBUG) Log.d(TAG, "Error Connecting to Faye");
 
@@ -560,6 +571,9 @@ public class FayeClient implements Listener {
                         mConnected = false;
                         closeWebSocketConnection();
 
+                        if (mFayeListener != null) {
+                            mFayeListener.onConnectionChanged(false);
+                        }
                         if (mFayeListener != null) {
                             mFayeListener.disconnectedFromServer();
                         }
@@ -671,5 +685,6 @@ public class FayeClient implements Listener {
         void subscribedToChannel(String subscription);
         void subscriptionFailedWithError(String error);
         void messageReceived(JSONObject json);
+        void onConnectionChanged(boolean connected);
     }
 }

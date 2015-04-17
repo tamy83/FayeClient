@@ -25,6 +25,7 @@ public class FayeService extends IntentService implements FayeListener {
     private Handler mHandler;
     private FayeClient mClient;
     private FayePG fayePG;
+    private String command;
 
 
     public FayeService() {
@@ -56,6 +57,7 @@ public class FayeService extends IntentService implements FayeListener {
         try {
             String address = intent.getStringExtra("address");
             String channel = intent.getStringExtra("channel");
+            command = intent.getStringExtra("command");
 
             URI uri = URI.create(address);
 
@@ -95,6 +97,11 @@ public class FayeService extends IntentService implements FayeListener {
         }
     }
 
+    public void subscribe() {
+        if (mClient != null)
+            mClient.subscribe();
+    }
+
     public void sendMessage(String channel, JSONObject data) {
         if (mClient != null)
             mClient.sendMessage(channel, data);
@@ -102,7 +109,7 @@ public class FayeService extends IntentService implements FayeListener {
 
     void setFayeListener(FayeListener fayeListener) {
         if (fayeListener instanceof FayePG) {
-            Log.i(LOG_TAG, "FayeService setfayelister to fayePG");
+            Log.i(LOG_TAG, "FayeService setfayelistener to fayePG");
             fayePG = (FayePG) fayeListener;
         }
     }
@@ -146,31 +153,37 @@ public class FayeService extends IntentService implements FayeListener {
 
     @Override
     public void subscribedToChannel(String subscription) {
-        Log.i(LOG_TAG, String.format("Subscribed to channel %s on Faye", subscription));
+        Log.i(LOG_TAG, String.format("Subscribed to channel %s.", subscription));
     }
 
     @Override
     public void subscriptionFailedWithError(String error) {
-        Log.i(LOG_TAG, String.format("Subscription failed with error: %s", error));
+        Log.e(LOG_TAG, String.format("Subscription failed with error: %s", error));
     }
 
     @Override
     public void messageReceived(final JSONObject json) {
         Log.i(LOG_TAG, String.format("Received message in fayeService %s", json.toString()));
-        // deprecated
-        //fayePG.webView.sendJavascript("execute(" + json.toString() + ");");
-//        Looper.getMainLooper().setMessageLogging(new LogPrinter(Log.VERBOSE, "Faye"));
-        // call javascript command here and pass json
+        // call javascript command and pass json
         Runnable r = new Runnable() {
             @Override
             public void run() {
 
-                fayePG.webView.loadUrl("javascript:execute(" + json.toString() + ");");
-                //fayePG.webView.evaluateJavascript("javascript:execute("+json.toString()+");", null);
+                fayePG.webView.loadUrl("javascript:" + command + "(" + json.toString() + ");");
             }
         };
         mHandler.post(r);
 
+    }
+
+    @Override
+    public void onConnectionChanged(boolean connection) {
+        if (fayePG != null) {
+            if (connection)
+                fayePG.displayNotification();
+            else
+                fayePG.removeNotification();
+        }
     }
 
 }
