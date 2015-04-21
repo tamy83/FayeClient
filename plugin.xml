@@ -45,7 +45,7 @@
 		<config-file target="AndroidManifest.xml" parent="/*">
 			<uses-permission android:name="android.permission.READ_CONTACTS" />
 			<uses-permission android:name="android.permission.WRITE_CONTACTS" />
-			<uses-permission android:name="WRITE_EXTERNAL_STORAGE" />
+			<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
 			<!-- com.saulpower.fayeclient -->
 			<uses-sdk 
