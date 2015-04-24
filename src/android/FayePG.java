@@ -20,7 +20,12 @@ import android.support.v4.app.NotificationCompat;
 import android.app.PendingIntent;
 import com.saulpower.fayeclient.FayeClient;
 
+import android.os.Looper;
+import android.os.Handler;
+
 import java.io.IOException;
+
+
 
 public class FayePG extends CordovaPlugin {
 
@@ -45,6 +50,7 @@ public class FayePG extends CordovaPlugin {
     private boolean fayeIsBound;
 
     public FayePG() {
+        destroyed = false;
         if (DEBUG_MODE)
             logToFile();
     }
@@ -101,7 +107,6 @@ public class FayePG extends CordovaPlugin {
         if (channel == null || channel.length() == 0 || command == null) {
             callbackContext.error("Expected one non-empty string argument.");
         } else if (address != null && address.length() != 0 && user != null && user.length() != 0 && sid != null && sid.length() != 0) {
-
             this.channel = channel;
             this.command = command;
             intent = new Intent(this.cordova.getActivity().getApplicationContext(), FayeService.class);
@@ -110,10 +115,8 @@ public class FayePG extends CordovaPlugin {
             intent.putExtra("sid", sid);
             intent.putExtra("channel", this.channel);
             intent.putExtra("command", this.command);
-
             if (!fayeIsBound) {
                 doBindService();
-                this.cordova.getActivity().getApplicationContext().startService(intent);
                 Log.i(LOG_TAG, "subscribe to: " + this.channel + " with command: " + this.command);
             } else {
                 callbackContext.success("Already subscribed.");
@@ -138,7 +141,10 @@ public class FayePG extends CordovaPlugin {
         public void onServiceConnected(ComponentName className, IBinder service) {
             fayeService = ((FayeService.FayeBinder)service).getService();
             fayeService.setFaye(FayePG.this);
+            fayeService.setNotif(FayePG.this.NOTIF_ICON_ID, getNotification());
             Log.i(LOG_TAG, "fayeService is bound");
+            Log.i(LOG_TAG, "starting service");
+            FayePG.this.cordova.getActivity().getApplicationContext().startService(intent);
         }
 
         public void onServiceDisconnected(ComponentName className) {
@@ -200,8 +206,27 @@ public class FayePG extends CordovaPlugin {
     public void onDestroy() {
         super.onDestroy();
         Log.i(LOG_TAG, "fayePG onDestroy called");
-        removeNotification();
+        destroyed = true;
+        /*
+        //removeNotification();
+        fayeService.disconnect();
+        doUnbindService();
+        this.cordova.getActivity().getApplicationContext().stopService(intent);
+        */
+        NotificationManager mNotificationManager =
+                (NotificationManager) this.cordova.getActivity().getSystemService(Context.NOTIFICATION_SERVICE);
+        mNotificationManager.notify(NOTIF_ICON_ID, getNotification("activity destroyed"));
     }
+
+    public boolean isDestroyed() {
+        return destroyed;
+    }
+
+    public void setDestroyed(boolean destroyed) {
+        this.destroyed = destroyed;
+    }
+
+    private boolean destroyed;
 
     public void removeNotification() {
         NotificationManager mNotificationManager =
@@ -209,8 +234,8 @@ public class FayePG extends CordovaPlugin {
         mNotificationManager.cancel(NOTIF_ICON_ID);
     }
 
-    public void displayNotification() {
-
+    public Notification getNotification() {
+        Notification notif = null;
         try {
             int icon = this.cordova.getActivity().getResources().getIdentifier(NOTIF_ICON, NOTIF_ICON_TYPE, APP_PACKAGE);
             if (icon == 0)
@@ -230,17 +255,48 @@ public class FayePG extends CordovaPlugin {
                             .setContentTitle(NOTIF_TITLE)
                             .setContentText(NOTIF_TEXT)
                             .setOngoing(true)
-                            .setContentIntent(pendingIntent);
+                            .setContentIntent(pendingIntent)
+                            .setTicker(NOTIF_TEXT);
 
-            Notification notif = mBuilder.build();
-            NotificationManager mNotificationManager =
-                    (NotificationManager) this.cordova.getActivity().getSystemService(Context.NOTIFICATION_SERVICE);
-
-            mNotificationManager.notify(NOTIF_ICON_ID, notif);
+            notif = mBuilder.build();
         } catch (ClassNotFoundException ex) {
             Log.e(LOG_TAG, "Error: Can't find class of cordova activity!");
         }
+        return notif;
+    }
 
+    public Notification getNotification(String txt) {
+        if (txt == null) {
+            txt = "";
+        }
+        Notification notif = null;
+        try {
+            int icon = this.cordova.getActivity().getResources().getIdentifier(NOTIF_ICON, NOTIF_ICON_TYPE, APP_PACKAGE);
+            if (icon == 0)
+                Log.i(LOG_TAG, "notification icon not found");
+
+            Intent notifIntent = new Intent(this.cordova.getActivity().getApplicationContext(),
+                    Class.forName(this.cordova.getActivity().getComponentName().getClassName()));
+            notifIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+            PendingIntent pendingIntent = PendingIntent.getActivity(this.cordova.getActivity().getApplicationContext(),
+                    0, notifIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+            NotificationCompat.Builder mBuilder =
+                    new NotificationCompat.Builder(this.cordova.getActivity().getApplicationContext())
+                            .setSmallIcon(icon)
+                            .setContentTitle(NOTIF_TITLE)
+                            .setContentText(txt)
+                            .setOngoing(true)
+                            .setContentIntent(pendingIntent)
+                            .setTicker(txt);
+
+            notif = mBuilder.build();
+        } catch (ClassNotFoundException ex) {
+            Log.e(LOG_TAG, "Error: Can't find class of cordova activity!");
+        }
+        return notif;
     }
 
     private void logToFile() {
@@ -252,4 +308,5 @@ public class FayePG extends CordovaPlugin {
             Log.e(LOG_TAG, e.getMessage());
         }
     }
+
 }
