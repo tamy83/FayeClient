@@ -22,6 +22,10 @@ import com.saulpower.fayeclient.FayeClient;
 
 import android.os.Looper;
 import android.os.Handler;
+import com.monmouth.monmouthtelecom.MobileCarrier;
+import com.monmouth.monmouthtelecom.User;
+import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
 
 import java.io.IOException;
 
@@ -48,6 +52,7 @@ public class FayePG extends CordovaPlugin {
     private FayeService fayeService;
     private Intent intent;
     private boolean fayeIsBound;
+    private MobileCarrier carrier;
 
     public FayePG() {
         destroyed = false;
@@ -89,6 +94,18 @@ public class FayePG extends CordovaPlugin {
             this.user = user;
             this.sid= sid;
             Log.i(LOG_TAG, "address: " + this.address + " user: " + this.user + " sid: " + this.sid);
+
+            SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(cordova.getActivity());
+
+            carrier = new MobileCarrier(sharedPrefs.getString("carrierName", null),
+                    sharedPrefs.getString("countryCode", null),
+                    Integer.parseInt(sharedPrefs.getString("mcc", "-1")),
+                    Integer.parseInt(sharedPrefs.getString("mnc", "-1"))
+                    );
+
+            Log.i(LOG_TAG, "fayePG init carrierName: " + carrier.getCarrierName()
+                    + " countryCode: " + carrier.getCountryCode() + " mcc: " + carrier.getMcc()
+                    + " mnc: " + carrier.getMnc());
             callbackContext.success();
         } else {
             callbackContext.error("Invalid argument(s).");
@@ -115,6 +132,10 @@ public class FayePG extends CordovaPlugin {
             intent.putExtra("sid", sid);
             intent.putExtra("channel", this.channel);
             intent.putExtra("command", this.command);
+            intent.putExtra("carrierName", carrier.getCarrierName());
+            intent.putExtra("countryCode", carrier.getCountryCode());
+            intent.putExtra("mcc", carrier.getMcc());
+            intent.putExtra("mnc", carrier.getMnc());
             if (!fayeIsBound) {
                 doBindService();
                 Log.i(LOG_TAG, "subscribe to: " + this.channel + " with command: " + this.command);
@@ -143,6 +164,8 @@ public class FayePG extends CordovaPlugin {
             fayeService.setFaye(FayePG.this);
             fayeService.setNotif(FayePG.this.NOTIF_ICON_ID, getNotification());
             Log.i(LOG_TAG, "fayeService is bound");
+
+            // start service on connection binding???
             Log.i(LOG_TAG, "starting service");
             FayePG.this.cordova.getActivity().getApplicationContext().startService(intent);
         }

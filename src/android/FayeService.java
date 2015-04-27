@@ -28,6 +28,22 @@ import android.content.Context;
 
 import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.CordovaActivity;
+import com.monmouth.monmouthtelecom.MobileCarrier;
+import android.content.ContentProvider;
+import android.content.ContentResolver;
+import android.database.Cursor;
+import android.provider.ContactsContract;
+import android.provider.ContactsContract.PhoneLookup;
+import android.net.Uri;
+import java.util.ArrayList;
+import android.content.ContentProviderOperation;
+import java.util.List;
+import android.provider.ContactsContract.Data;
+import android.provider.ContactsContract.CommonDataKinds.Phone;
+import android.os.RemoteException;
+import android.content.OperationApplicationException;
+import android.provider.ContactsContract.CommonDataKinds.StructuredName;
+import com.monmouth.monmouthtelecom.MTTMsgExecuter;
 
 //public class FayeService extends IntentService implements FayeListener {
 public class FayeService extends Service implements FayeListener {
@@ -42,6 +58,7 @@ public class FayeService extends Service implements FayeListener {
     private boolean startedForeground = false;
     private Notification notif;
     private int notif_id;
+    private MobileCarrier carrier;
 
     public Notification getNotif() {
         return notif;
@@ -82,6 +99,12 @@ public class FayeService extends Service implements FayeListener {
             JSONObject ext = new JSONObject();
             ext.put("user", user);
             ext.put("sid", sid);
+
+            carrier = new MobileCarrier(intent.getStringExtra("carrierName"),
+                    intent.getStringExtra("countryCode"),
+                    intent.getIntExtra("mcc", -1),
+                    intent.getIntExtra("mnc", -1)
+                    );
 
             if (mHandler == null) {
                 mHandler = new Handler(Looper.getMainLooper()); // still references app looper if service restarts?
@@ -184,46 +207,16 @@ public class FayeService extends Service implements FayeListener {
     public void messageReceived(final JSONObject json) {
         Log.i(LOG_TAG, String.format("Received message in fayeService %s", json.toString()));
         // call javascript command and pass json
-        Runnable r = new Runnable() {
-            @Override
-            public void run() {
-                if (fayePG.isDestroyed()) {
-                    Log.i(LOG_TAG, "Activity destroyed");
-                    //fayePG.webView = new CordovaWebView(ctx);
-                    /*CordovaInterface cordova, CordovaWebViewClient webViewClient, CordovaChromeClient webChromeClient,
-                            List<PluginEntry> pluginEntries, Whitelist internalWhitelist, Whitelist externalWhitelist,
-                            CordovaPreferences preferences) {
-                            */
-                    //fayePG.webView.init(fayePG.cordova, fayePG.cordova.getActivity().webViewClient);
-                    //fayePG.getActivity() =
-                    //CordovaActivity act = new CordovaActivity();
-                    //act.init();
-                    //CordovaWebView newWebView = new CordovaWebView(ctx);
-                    //fayePG.setDestroyed(false);
-                    //act.loadUrl("javascript:" + command + "(" + json.toString() + ");");
-                    //fayePG.webView.loadUrl("javascript:" + command + "(" + json.toString() + ");");
+        Log.i(LOG_TAG, "carrierName: " + carrier.getCarrierName()
+                + " countryCode: " + carrier.getCountryCode() + " mcc: " + carrier.getMcc()
+                + " mnc: " + carrier.getMnc());
 
-                    Intent notifIntent = new Intent(ctx,className);
-                    notifIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        MTTMsgExecuter mMttMsgExecuter = new MTTMsgExecuter(this, carrier);
 
-                    ctx.startActivity(notifIntent);
+        mMttMsgExecuter.execute(json);
 
-                    Runnable r1 = new Runnable() {
-                        @Override
-                        public void run() {
-                            Log.i(LOG_TAG, "executing r1");
-                            fayePG.webView.loadUrl("javascript:" + command + "(" + json.toString() + ");");
-                        }
-                    };
-                    mHandler.postDelayed(r1, 10000);
-
-                } else {
-                    fayePG.webView.loadUrl("javascript:" + command + "(" + json.toString() + ");");
-                }
-
-            }
-        };
-        mHandler.post(r);
+//        displayContacts();
+//        wtf();
     }
 
 
@@ -237,6 +230,155 @@ public class FayeService extends Service implements FayeListener {
             Log.i(LOG_TAG, className.toString());
         } catch (ClassNotFoundException ex) {
             Log.e(LOG_TAG, "Error: Can't find class of cordova activity!");
+        }
+    }
+
+
+
+
+
+    private void displayContacts() {
+
+        /*
+        ContentResolver cr = getContentResolver();
+
+        Uri uri = Uri.withAppendedPath(PhoneLookup.CONTENT_FILTER_URI, Uri.encode("9175430921"));
+        Cursor cur = cr.query(uri, new String[]{PhoneLookup._ID, PhoneLookup.DISPLAY_NAME}, null, null, null);
+
+        //if (cur.getCount() > 0) {
+        try {
+            while (cur.moveToNext()) {
+                String id = cur.getString(cur.getColumnIndex(ContactsContract.Contacts._ID));
+                String name = cur.getString(cur.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME));
+                if (Integer.parseInt(cur.getString(
+                        cur.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER))) > 0) {
+                    Cursor pCur = cr.query(
+                            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                            null,
+                            ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?",
+                            new String[]{id}, null);
+                    while (pCur.moveToNext()) {
+                        String phoneNo = pCur.getString(pCur.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
+                        Log.i(LOG_TAG, "ID:" + id + " Name: " + name + " Phone No: " + phoneNo);
+                    }
+                    pCur.close();
+                }
+            }
+            //}
+        } finally {
+            cur.close();
+        }
+        */
+        String contactName = "", contactId = "", contactLookupKey = "";
+        ContentResolver localContentResolver = getContentResolver();
+        Cursor contactLookupCursor =
+                localContentResolver.query(
+                        Uri.withAppendedPath(PhoneLookup.CONTENT_FILTER_URI,
+                                Uri.encode("002144")),
+                        new String[] {PhoneLookup.DISPLAY_NAME, PhoneLookup._ID, PhoneLookup.LOOKUP_KEY},
+                        null,
+                        null,
+                        null);
+        try {
+            while(contactLookupCursor.moveToNext()){
+                contactName = contactLookupCursor.getString(contactLookupCursor.getColumnIndexOrThrow(PhoneLookup.DISPLAY_NAME));
+                contactId = contactLookupCursor.getString(contactLookupCursor.getColumnIndexOrThrow(PhoneLookup._ID));
+                contactLookupKey = contactLookupCursor.getString(contactLookupCursor.getColumnIndexOrThrow(PhoneLookup.LOOKUP_KEY));
+                Log.d(LOG_TAG, "contactMatch name: " + contactName);
+                Log.d(LOG_TAG, "contactMatch id: " + contactId);
+                Log.d(LOG_TAG, "contactMatch lookup key: " + contactLookupKey);
+            }
+        } finally {
+            contactLookupCursor.close();
+        }
+
+    }
+
+    private void wtf() {
+
+/*
+        Cursor c = getContentResolver().query(Contacts.CONTENT_URI,
+                new String[] {Contacts._ID, ContactsContract.CommonDataKinds.StructuredName.GIVEN_NAME,
+                        ContactsContract.CommonDataKinds.StructuredName.FAMILY_NAME,
+                        ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME, },
+                Phone.NUMBER + "=?" + " AND "
+                        + Data.MIMETYPE + "='" + Phone.CONTENT_ITEM_TYPE + "'",
+                new String[] {String.valueOf("002144")}, null);
+        try {
+            while(c.moveToNext()){
+                String dataID = c.getString(c.getColumnIndexOrThrow(Contacts._ID));
+                String sname = c.getString(c.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.StructuredName.GIVEN_NAME));
+                String fname = c.getString(c.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.StructuredName.FAMILY_NAME));
+                String dname = c.getString(c.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME));
+                Log.d(LOG_TAG, "dataid: " + dataID); // id of data row
+                Log.d(LOG_TAG, "phonelookup display name: " + name);
+                Log.d(LOG_TAG, "given name: " + sname);
+                Log.d(LOG_TAG, "family name: " + fname);
+                Log.d(LOG_TAG, "structured name display name: " + dname);
+                Log.d(LOG_TAG, "number: " + number);
+                Log.d(LOG_TAG, "type: " + type);
+                Log.d(LOG_TAG, "label: " + label);
+            }
+        } finally {
+            c.close();
+        }
+*/
+        //id: 1325 contactMatch lookup key: 286iff364658fb338a0
+
+        Cursor c = getContentResolver().query(Data.CONTENT_URI, null,
+                Phone.NUMBER + "=?",
+                new String[] {String.valueOf("002144")}, null);
+        try {
+            while(c.moveToNext()){
+                String dataID = c.getString(c.getColumnIndexOrThrow(Data._ID));
+                String name = c.getString(c.getColumnIndexOrThrow(PhoneLookup.DISPLAY_NAME));
+                String number = c.getString(c.getColumnIndexOrThrow(Phone.NUMBER));
+                String type = c.getString(c.getColumnIndexOrThrow(Phone.TYPE));
+                String label = c.getString(c.getColumnIndexOrThrow(Phone.LABEL));
+                Log.d(LOG_TAG, "dataid: " + dataID); // id of data row
+                Log.d(LOG_TAG, "phonelookup display name: " + name);
+                Log.d(LOG_TAG, "number: " + number);
+                Log.d(LOG_TAG, "type: " + type);
+                Log.d(LOG_TAG, "label: " + label);
+            }
+        } finally {
+            c.close();
+        }
+
+        Cursor cursor = getContentResolver().query(ContactsContract.Data.CONTENT_URI,
+                null, ContactsContract.Data.DISPLAY_NAME + "=?",
+                new String[] {String.valueOf("Saul Goodman")}, null);
+        if (cursor != null) {
+            while (cursor.moveToNext()) {
+                String mime = cursor.getString(cursor.getColumnIndex(ContactsContract.Data.MIMETYPE));
+                if (mime.equals(ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE)) {
+                    String givenName = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.StructuredName.GIVEN_NAME));
+                    String familyName = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.StructuredName.FAMILY_NAME));
+                    String displayName = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME));
+                    Log.d(LOG_TAG, "structured name given name: " + givenName);
+                    Log.d(LOG_TAG, "structured name family name: " + familyName);
+                    Log.d(LOG_TAG, "structured name display name: " + displayName);
+                } else if (mime.equals(ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)) {
+                    if (ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE == cursor.getInt(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.TYPE))) {
+                        Log.d(LOG_TAG, "phone #: " + cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)));
+                    }
+                }
+            }
+            cursor.close();
+        }
+    }
+
+    private void removeNumber(int contactId) {
+        try {
+            ArrayList<ContentProviderOperation> ops = new ArrayList<ContentProviderOperation>();
+            ops.add(ContentProviderOperation.newDelete(Data.CONTENT_URI)
+                    .withSelection(Phone.NUMBER + "=? and " + Data.MIMETYPE + "=?", new String[]{String.valueOf(contactId), Phone.CONTENT_ITEM_TYPE})
+                    .build());
+            getContentResolver().applyBatch(ContactsContract.AUTHORITY, ops);
+        } catch (RemoteException e) {
+            Log.e(LOG_TAG, e.getMessage());
+        } catch (OperationApplicationException ex) {
+            Log.e(LOG_TAG, ex.getMessage());
         }
     }
 
