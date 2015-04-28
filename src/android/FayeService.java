@@ -11,21 +11,22 @@ import org.json.JSONObject;
 import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-
+import android.os.Environment;
+import java.io.IOException;
 import android.os.Looper;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Binder;
+import android.app.PendingIntent;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
 import com.monmouth.fayePG.FayePG;
 import android.util.LogPrinter;
-
+import android.os.HandlerThread;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.support.v4.app.NotificationCompat;
 import android.content.Context;
-
 import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.CordovaActivity;
 import com.monmouth.monmouthtelecom.MobileCarrier;
@@ -45,10 +46,19 @@ import android.content.OperationApplicationException;
 import android.provider.ContactsContract.CommonDataKinds.StructuredName;
 import com.monmouth.monmouthtelecom.MTTMsgExecuter;
 
-//public class FayeService extends IntentService implements FayeListener {
 public class FayeService extends Service implements FayeListener {
 
     private static final String LOG_TAG = "Faye";
+
+    private static final boolean DEBUG_MODE                 = true;
+    private static final String LOG_FILE                    = "mttlog";
+    private static final String APP_PACKAGE                 = "com.monmouth.monmouthtelecom";
+    private static final String NOTIF_ICON                  = "icon_notification";
+    private static final String NOTIF_ICON_TYPE             = "drawable";
+    private static final String NOTIF_TITLE                 = "Monmouth Telecom";
+    private static final String NOTIF_TEXT                  = "Call forward activated!";
+    private static final int NOTIF_ICON_ID                  = 1;
+    private static final String APP_ACTIVITY                = "com.monmouth.monmouthtelecom.MonmouthTelecom";
 
     private Handler mHandler;
     private FayeClient mClient;
@@ -65,6 +75,7 @@ public class FayeService extends Service implements FayeListener {
     }
 
     public void setNotif(int id, Notification notif) {
+        /*
         this.notif = notif;
         notif_id = id;
         if (!startedForeground) {
@@ -77,12 +88,15 @@ public class FayeService extends Service implements FayeListener {
                 mNotificationManager.notify(id, notif);
             }
         }
+        */
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         // SSL bug in pre-Gingerbread devices makes websockets currently unusable
         if (android.os.Build.VERSION.SDK_INT <= 8) return START_NOT_STICKY;
+        if (DEBUG_MODE)
+            logToFile();
 
         Log.i(LOG_TAG, "Starting Web Socket");
 
@@ -107,7 +121,10 @@ public class FayeService extends Service implements FayeListener {
                     );
 
             if (mHandler == null) {
-                mHandler = new Handler(Looper.getMainLooper()); // still references app looper if service restarts?
+                HandlerThread mHandlerThread = new HandlerThread("fayeService-thread");
+                mHandlerThread.start();
+                mHandler = new Handler(mHandlerThread.getLooper());
+                //mHandler = new Handler(Looper.getMainLooper()); // still references app looper if service restarts?
             }
             mClient = new FayeClient(mHandler, uri, channel);
 
@@ -120,15 +137,12 @@ public class FayeService extends Service implements FayeListener {
             //mClient.setFayeListener(fayePG);
             mClient.setFayeListener(this);
             mClient.connectToServer(ext);
-            if (notif != null)
-                startForeground(notif_id,notif);
-
+            startForeground(NOTIF_ICON_ID, getNotification());
 
         } catch (JSONException ex) {
             Log.e(LOG_TAG, "JSONException: " + ex.getMessage());
         }
 
-        // no need to redeliver intent if restarted services can't process msg if activity/webviews are gone?
         return START_REDELIVER_INTENT;
     }
 
@@ -212,11 +226,8 @@ public class FayeService extends Service implements FayeListener {
                 + " mnc: " + carrier.getMnc());
 
         MTTMsgExecuter mMttMsgExecuter = new MTTMsgExecuter(this, carrier);
-
         mMttMsgExecuter.execute(json);
 
-//        displayContacts();
-//        wtf();
     }
 
 
@@ -232,155 +243,44 @@ public class FayeService extends Service implements FayeListener {
             Log.e(LOG_TAG, "Error: Can't find class of cordova activity!");
         }
     }
+//04-28 11:39:47.918: I/Faye(32534): class com.monmouth.monmouthtelecom.MonmouthTelecom
 
-
-
-
-
-    private void displayContacts() {
-
-        /*
-        ContentResolver cr = getContentResolver();
-
-        Uri uri = Uri.withAppendedPath(PhoneLookup.CONTENT_FILTER_URI, Uri.encode("9175430921"));
-        Cursor cur = cr.query(uri, new String[]{PhoneLookup._ID, PhoneLookup.DISPLAY_NAME}, null, null, null);
-
-        //if (cur.getCount() > 0) {
+    public Notification getNotification() {
+        Notification notif = null;
         try {
-            while (cur.moveToNext()) {
-                String id = cur.getString(cur.getColumnIndex(ContactsContract.Contacts._ID));
-                String name = cur.getString(cur.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME));
-                if (Integer.parseInt(cur.getString(
-                        cur.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER))) > 0) {
-                    Cursor pCur = cr.query(
-                            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                            null,
-                            ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?",
-                            new String[]{id}, null);
-                    while (pCur.moveToNext()) {
-                        String phoneNo = pCur.getString(pCur.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
-                        Log.i(LOG_TAG, "ID:" + id + " Name: " + name + " Phone No: " + phoneNo);
-                    }
-                    pCur.close();
-                }
-            }
-            //}
-        } finally {
-            cur.close();
-        }
-        */
-        String contactName = "", contactId = "", contactLookupKey = "";
-        ContentResolver localContentResolver = getContentResolver();
-        Cursor contactLookupCursor =
-                localContentResolver.query(
-                        Uri.withAppendedPath(PhoneLookup.CONTENT_FILTER_URI,
-                                Uri.encode("002144")),
-                        new String[] {PhoneLookup.DISPLAY_NAME, PhoneLookup._ID, PhoneLookup.LOOKUP_KEY},
-                        null,
-                        null,
-                        null);
-        try {
-            while(contactLookupCursor.moveToNext()){
-                contactName = contactLookupCursor.getString(contactLookupCursor.getColumnIndexOrThrow(PhoneLookup.DISPLAY_NAME));
-                contactId = contactLookupCursor.getString(contactLookupCursor.getColumnIndexOrThrow(PhoneLookup._ID));
-                contactLookupKey = contactLookupCursor.getString(contactLookupCursor.getColumnIndexOrThrow(PhoneLookup.LOOKUP_KEY));
-                Log.d(LOG_TAG, "contactMatch name: " + contactName);
-                Log.d(LOG_TAG, "contactMatch id: " + contactId);
-                Log.d(LOG_TAG, "contactMatch lookup key: " + contactLookupKey);
-            }
-        } finally {
-            contactLookupCursor.close();
-        }
+            int icon = this.getResources().getIdentifier(NOTIF_ICON, NOTIF_ICON_TYPE, APP_PACKAGE);
+            if (icon == 0)
+                Log.i(LOG_TAG, "notification icon not found");
 
+            Intent notifIntent = new Intent(this, Class.forName(APP_ACTIVITY));
+            notifIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+            PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notifIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+            NotificationCompat.Builder mBuilder =
+                    new NotificationCompat.Builder(this)
+                            .setSmallIcon(icon)
+                            .setContentTitle(NOTIF_TITLE)
+                            .setContentText(NOTIF_TEXT)
+                            .setOngoing(true)
+                            .setContentIntent(pendingIntent)
+                            .setTicker(NOTIF_TEXT);
+
+            notif = mBuilder.build();
+        } catch (ClassNotFoundException ex) {
+            Log.e(LOG_TAG, "Error: Can't find class of cordova activity!");
+        }
+        return notif;
     }
 
-    private void wtf() {
-
-/*
-        Cursor c = getContentResolver().query(Contacts.CONTENT_URI,
-                new String[] {Contacts._ID, ContactsContract.CommonDataKinds.StructuredName.GIVEN_NAME,
-                        ContactsContract.CommonDataKinds.StructuredName.FAMILY_NAME,
-                        ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME, },
-                Phone.NUMBER + "=?" + " AND "
-                        + Data.MIMETYPE + "='" + Phone.CONTENT_ITEM_TYPE + "'",
-                new String[] {String.valueOf("002144")}, null);
+    private void logToFile() {
+        String timeStamp = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(new Date());
+        String filePath = Environment.getExternalStorageDirectory() + "/" + LOG_FILE + timeStamp + ".txt";
         try {
-            while(c.moveToNext()){
-                String dataID = c.getString(c.getColumnIndexOrThrow(Contacts._ID));
-                String sname = c.getString(c.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.StructuredName.GIVEN_NAME));
-                String fname = c.getString(c.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.StructuredName.FAMILY_NAME));
-                String dname = c.getString(c.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME));
-                Log.d(LOG_TAG, "dataid: " + dataID); // id of data row
-                Log.d(LOG_TAG, "phonelookup display name: " + name);
-                Log.d(LOG_TAG, "given name: " + sname);
-                Log.d(LOG_TAG, "family name: " + fname);
-                Log.d(LOG_TAG, "structured name display name: " + dname);
-                Log.d(LOG_TAG, "number: " + number);
-                Log.d(LOG_TAG, "type: " + type);
-                Log.d(LOG_TAG, "label: " + label);
-            }
-        } finally {
-            c.close();
-        }
-*/
-        //id: 1325 contactMatch lookup key: 286iff364658fb338a0
-
-        Cursor c = getContentResolver().query(Data.CONTENT_URI, null,
-                Phone.NUMBER + "=?",
-                new String[] {String.valueOf("002144")}, null);
-        try {
-            while(c.moveToNext()){
-                String dataID = c.getString(c.getColumnIndexOrThrow(Data._ID));
-                String name = c.getString(c.getColumnIndexOrThrow(PhoneLookup.DISPLAY_NAME));
-                String number = c.getString(c.getColumnIndexOrThrow(Phone.NUMBER));
-                String type = c.getString(c.getColumnIndexOrThrow(Phone.TYPE));
-                String label = c.getString(c.getColumnIndexOrThrow(Phone.LABEL));
-                Log.d(LOG_TAG, "dataid: " + dataID); // id of data row
-                Log.d(LOG_TAG, "phonelookup display name: " + name);
-                Log.d(LOG_TAG, "number: " + number);
-                Log.d(LOG_TAG, "type: " + type);
-                Log.d(LOG_TAG, "label: " + label);
-            }
-        } finally {
-            c.close();
-        }
-
-        Cursor cursor = getContentResolver().query(ContactsContract.Data.CONTENT_URI,
-                null, ContactsContract.Data.DISPLAY_NAME + "=?",
-                new String[] {String.valueOf("Saul Goodman")}, null);
-        if (cursor != null) {
-            while (cursor.moveToNext()) {
-                String mime = cursor.getString(cursor.getColumnIndex(ContactsContract.Data.MIMETYPE));
-                if (mime.equals(ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE)) {
-                    String givenName = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.StructuredName.GIVEN_NAME));
-                    String familyName = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.StructuredName.FAMILY_NAME));
-                    String displayName = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME));
-                    Log.d(LOG_TAG, "structured name given name: " + givenName);
-                    Log.d(LOG_TAG, "structured name family name: " + familyName);
-                    Log.d(LOG_TAG, "structured name display name: " + displayName);
-                } else if (mime.equals(ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)) {
-                    if (ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE == cursor.getInt(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.TYPE))) {
-                        Log.d(LOG_TAG, "phone #: " + cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)));
-                    }
-                }
-            }
-            cursor.close();
-        }
-    }
-
-    private void removeNumber(int contactId) {
-        try {
-            ArrayList<ContentProviderOperation> ops = new ArrayList<ContentProviderOperation>();
-            ops.add(ContentProviderOperation.newDelete(Data.CONTENT_URI)
-                    .withSelection(Phone.NUMBER + "=? and " + Data.MIMETYPE + "=?", new String[]{String.valueOf(contactId), Phone.CONTENT_ITEM_TYPE})
-                    .build());
-            getContentResolver().applyBatch(ContactsContract.AUTHORITY, ops);
-        } catch (RemoteException e) {
+            Runtime.getRuntime().exec(new String[]{"logcat", "-f", filePath, "-v", "time"});
+        } catch (IOException e) {
             Log.e(LOG_TAG, e.getMessage());
-        } catch (OperationApplicationException ex) {
-            Log.e(LOG_TAG, ex.getMessage());
         }
     }
-
-
 }

@@ -57,7 +57,6 @@
 		<source-file src="src/android/FayePG.java" target-dir="src/com/monmouth/fayePG" />
 		<source-file src="src/android/FayeService.java" target-dir="src/com/monmouth/fayePG" />
     <source-file src="src/android/MobileCarrier.java" target-dir="src/com/monmouth/MonmouthTelecom" />
-		<source-file src="src/android/User.java" target-dir="src/com/monmouth/MonmouthTelecom" />
     <source-file src="src/android/MTTMsgExecuter.java" target-dir="src/com/monmouth/MonmouthTelecom" />
 		<source-file src="src/android/com.saulpower.fayeclient/Base64.java" target-dir="src/com/saulpower/fayeclient" />
 		<source-file src="src/android/com.saulpower.fayeclient/FayeClient.java" target-dir="src/com/saulpower/fayeclient" />

@@ -19,14 +19,11 @@ import android.app.NotificationManager;
 import android.support.v4.app.NotificationCompat;
 import android.app.PendingIntent;
 import com.saulpower.fayeclient.FayeClient;
-
 import android.os.Looper;
 import android.os.Handler;
 import com.monmouth.monmouthtelecom.MobileCarrier;
-import com.monmouth.monmouthtelecom.User;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
-
 import java.io.IOException;
 
 
@@ -35,14 +32,8 @@ public class FayePG extends CordovaPlugin {
 
     private static final String LOG_TAG                     = "Faye";
 
-    private static final boolean DEBUG_MODE                 = true;
+    private static final boolean DEBUG_MODE                 = false;
     private static final String LOG_FILE                    = "mttlog";
-    private static final String APP_PACKAGE                 = "com.monmouth.monmouthtelecom";
-    private static final String NOTIF_ICON                  = "icon_notification";
-    private static final String NOTIF_ICON_TYPE             = "drawable";
-    private static final String NOTIF_TITLE                 = "Monmouth Telecom";
-    private static final String NOTIF_TEXT                  = "Call forward activated.";
-    private static final int NOTIF_ICON_ID                  = 1;
 
     private String address;
     private String channel;
@@ -55,7 +46,6 @@ public class FayePG extends CordovaPlugin {
     private MobileCarrier carrier;
 
     public FayePG() {
-        destroyed = false;
         if (DEBUG_MODE)
             logToFile();
     }
@@ -113,7 +103,7 @@ public class FayePG extends CordovaPlugin {
     }
 
     private void disconnect(CallbackContext callbackContext) {
-        Log.i(LOG_TAG, "disconnect" );
+        Log.i(LOG_TAG, "disconnect");
         fayeService.disconnect();
         doUnbindService();
         this.cordova.getActivity().getApplicationContext().stopService(intent);
@@ -162,7 +152,6 @@ public class FayePG extends CordovaPlugin {
         public void onServiceConnected(ComponentName className, IBinder service) {
             fayeService = ((FayeService.FayeBinder)service).getService();
             fayeService.setFaye(FayePG.this);
-            fayeService.setNotif(FayePG.this.NOTIF_ICON_ID, getNotification());
             Log.i(LOG_TAG, "fayeService is bound");
 
             // start service on connection binding???
@@ -229,97 +218,6 @@ public class FayePG extends CordovaPlugin {
     public void onDestroy() {
         super.onDestroy();
         Log.i(LOG_TAG, "fayePG onDestroy called");
-        destroyed = true;
-        /*
-        //removeNotification();
-        fayeService.disconnect();
-        doUnbindService();
-        this.cordova.getActivity().getApplicationContext().stopService(intent);
-        */
-        NotificationManager mNotificationManager =
-                (NotificationManager) this.cordova.getActivity().getSystemService(Context.NOTIFICATION_SERVICE);
-        mNotificationManager.notify(NOTIF_ICON_ID, getNotification("activity destroyed"));
-    }
-
-    public boolean isDestroyed() {
-        return destroyed;
-    }
-
-    public void setDestroyed(boolean destroyed) {
-        this.destroyed = destroyed;
-    }
-
-    private boolean destroyed;
-
-    public void removeNotification() {
-        NotificationManager mNotificationManager =
-                (NotificationManager) this.cordova.getActivity().getSystemService(Context.NOTIFICATION_SERVICE);
-        mNotificationManager.cancel(NOTIF_ICON_ID);
-    }
-
-    public Notification getNotification() {
-        Notification notif = null;
-        try {
-            int icon = this.cordova.getActivity().getResources().getIdentifier(NOTIF_ICON, NOTIF_ICON_TYPE, APP_PACKAGE);
-            if (icon == 0)
-                Log.i(LOG_TAG, "notification icon not found");
-
-            Intent notifIntent = new Intent(this.cordova.getActivity().getApplicationContext(),
-                    Class.forName(this.cordova.getActivity().getComponentName().getClassName()));
-            notifIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-
-            PendingIntent pendingIntent = PendingIntent.getActivity(this.cordova.getActivity().getApplicationContext(),
-                    0, notifIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-
-            NotificationCompat.Builder mBuilder =
-                    new NotificationCompat.Builder(this.cordova.getActivity().getApplicationContext())
-                            .setSmallIcon(icon)
-                            .setContentTitle(NOTIF_TITLE)
-                            .setContentText(NOTIF_TEXT)
-                            .setOngoing(true)
-                            .setContentIntent(pendingIntent)
-                            .setTicker(NOTIF_TEXT);
-
-            notif = mBuilder.build();
-        } catch (ClassNotFoundException ex) {
-            Log.e(LOG_TAG, "Error: Can't find class of cordova activity!");
-        }
-        return notif;
-    }
-
-    public Notification getNotification(String txt) {
-        if (txt == null) {
-            txt = "";
-        }
-        Notification notif = null;
-        try {
-            int icon = this.cordova.getActivity().getResources().getIdentifier(NOTIF_ICON, NOTIF_ICON_TYPE, APP_PACKAGE);
-            if (icon == 0)
-                Log.i(LOG_TAG, "notification icon not found");
-
-            Intent notifIntent = new Intent(this.cordova.getActivity().getApplicationContext(),
-                    Class.forName(this.cordova.getActivity().getComponentName().getClassName()));
-            notifIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-
-            PendingIntent pendingIntent = PendingIntent.getActivity(this.cordova.getActivity().getApplicationContext(),
-                    0, notifIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-
-            NotificationCompat.Builder mBuilder =
-                    new NotificationCompat.Builder(this.cordova.getActivity().getApplicationContext())
-                            .setSmallIcon(icon)
-                            .setContentTitle(NOTIF_TITLE)
-                            .setContentText(txt)
-                            .setOngoing(true)
-                            .setContentIntent(pendingIntent)
-                            .setTicker(txt);
-
-            notif = mBuilder.build();
-        } catch (ClassNotFoundException ex) {
-            Log.e(LOG_TAG, "Error: Can't find class of cordova activity!");
-        }
-        return notif;
     }
 
     private void logToFile() {
