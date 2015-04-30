@@ -77,6 +77,7 @@ public class WebSocketClient {
             public void run() {
 
                 try {
+                    Log.d(TAG, "Creating websocket thread!");
 
                     int port = (mURI.getPort() != -1) ? mURI.getPort() : (mURI.getScheme().equals("wss") ? 443 : 80);
 

@@ -56,4 +56,15 @@ public class MobileCarrier {
     public String toString() {
         return "Carrier: " + carrierName + " country code: " + countryCode + " mcc: " + mcc + " mnc: " + mnc;
     }
+
+    public String convertPhoneNumber(String num) {
+        // US
+        if (mcc == 310) {
+            // t-mobile
+            if (mnc == 26 || mnc == 60 || mnc == 160 || mnc == 260 || mnc == 490) {
+                num = "+1" + num;
+            }
+        }
+        return num;
+    }
 }

@@ -86,7 +86,7 @@ public class FayeClient implements Listener {
     private boolean mRunning = false;
     private boolean mReconnecting = false;
 
-    private Handler mHandler; // handler for main thread (should be UI? thread)
+    private Handler mHandler; // handler for main thread
 
     private Runnable mKeepAliveTask = new Runnable() {
         @Override

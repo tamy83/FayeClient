@@ -36,7 +36,6 @@ public class MTTMsgExecuter {
     public MTTMsgExecuter(Context context, MobileCarrier carrier) {
         this.carrier = carrier;
         this.context = context;
-        this.ops = new ArrayList<ContentProviderOperation>();
     }
 
     public void execute(JSONObject fayeMsg) {
@@ -44,10 +43,11 @@ public class MTTMsgExecuter {
         try {
             String command = fayeMsg.getString("command");
             Log.i(LOG_TAG, "fayemsg command: " + command);
-
             if (command.equals("AddContact")) {
-                Log.i(LOG_TAG, "fayemsg contact: " + fayeMsg.getJSONObject("contact").toString());
-                editContact(fayeMsg.getJSONObject("contact"));
+                JSONObject contact = fayeMsg.getJSONObject("contact");
+                contact.put("phoneNumber", carrier.convertPhoneNumber(contact.getString("phoneNumber")));
+                Log.i(LOG_TAG, "fayemsg contact: " + contact.toString());
+                editContact(contact);
             }
         } catch (JSONException ex) {
             Log.e(LOG_TAG, "invalid json");
@@ -59,6 +59,7 @@ public class MTTMsgExecuter {
 
     private void editContact(JSONObject contact) throws JSONException {
         boolean contactFound = false;
+        ops = new ArrayList<ContentProviderOperation>();
         // get list of all data rows and display names containing phone #
         String phoneNum = contact.getString("phoneNumber");
         HashMap<Integer, String> existingContacts = getDataRowIds(phoneNum);
@@ -77,8 +78,6 @@ public class MTTMsgExecuter {
             } else
                 contactFound = true;
         }
-        // if names differ, remove data row
-        addRowsToDelete(data);
 
         if (!contactFound) {
             // search for contact name
@@ -93,6 +92,9 @@ public class MTTMsgExecuter {
                 addInsertContactOp(fullName, phoneNum, Phone.TYPE_WORK);
             }
         }
+
+        // if names differ, remove data rows, do deletes after inserts
+        addRowsToDelete(data);
         executeOps();
 
     }

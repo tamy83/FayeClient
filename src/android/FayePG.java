@@ -153,9 +153,6 @@ public class FayePG extends CordovaPlugin {
             fayeService = ((FayeService.FayeBinder)service).getService();
             fayeService.setFaye(FayePG.this);
             Log.i(LOG_TAG, "fayeService is bound");
-
-            // start service on connection binding???
-            Log.i(LOG_TAG, "starting service");
             FayePG.this.cordova.getActivity().getApplicationContext().startService(intent);
         }
 
@@ -167,9 +164,8 @@ public class FayePG extends CordovaPlugin {
     };
 
     void doBindService() {
-        this.cordova.getActivity().getApplicationContext().bindService(intent,mConnection,
+        fayeIsBound = this.cordova.getActivity().getApplicationContext().bindService(intent,mConnection,
                 Context.BIND_AUTO_CREATE);
-        fayeIsBound = true;
     }
 
     void doUnbindService() {

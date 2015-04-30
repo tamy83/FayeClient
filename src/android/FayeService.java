@@ -56,40 +56,16 @@ public class FayeService extends Service implements FayeListener {
     private static final String NOTIF_ICON                  = "icon_notification";
     private static final String NOTIF_ICON_TYPE             = "drawable";
     private static final String NOTIF_TITLE                 = "Monmouth Telecom";
-    private static final String NOTIF_TEXT                  = "Call forward activated!";
+    private static final String NOTIF_TEXT                  = "Call forward activated.";
     private static final int NOTIF_ICON_ID                  = 1;
     private static final String APP_ACTIVITY                = "com.monmouth.monmouthtelecom.MonmouthTelecom";
 
     private Handler mHandler;
+    private HandlerThread mHandlerThread;
     private FayeClient mClient;
     private FayePG fayePG;
-    private String command;
-
-    private boolean startedForeground = false;
-    private Notification notif;
-    private int notif_id;
     private MobileCarrier carrier;
 
-    public Notification getNotif() {
-        return notif;
-    }
-
-    public void setNotif(int id, Notification notif) {
-        /*
-        this.notif = notif;
-        notif_id = id;
-        if (!startedForeground) {
-            startForeground(id, notif);
-            startedForeground = true;
-        } else {
-            if (fayePG != null) {
-                NotificationManager mNotificationManager =
-                        (NotificationManager) fayePG.cordova.getActivity().getSystemService(Context.NOTIFICATION_SERVICE);
-                mNotificationManager.notify(id, notif);
-            }
-        }
-        */
-    }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -98,12 +74,11 @@ public class FayeService extends Service implements FayeListener {
         if (DEBUG_MODE)
             logToFile();
 
-        Log.i(LOG_TAG, "Starting Web Socket");
+        Log.i(LOG_TAG, "FayeService onStart Command");
 
         try {
             String address = intent.getStringExtra("address");
             String channel = intent.getStringExtra("channel");
-            command = intent.getStringExtra("command");
 
             URI uri = URI.create(address);
 
@@ -121,23 +96,25 @@ public class FayeService extends Service implements FayeListener {
                     );
 
             if (mHandler == null) {
-                HandlerThread mHandlerThread = new HandlerThread("fayeService-thread");
+                Log.i(LOG_TAG, "Starting fayeservice thread");
+                mHandlerThread = new HandlerThread("fayeService-thread");
                 mHandlerThread.start();
                 mHandler = new Handler(mHandlerThread.getLooper());
-                //mHandler = new Handler(Looper.getMainLooper()); // still references app looper if service restarts?
+
+                mClient = new FayeClient(mHandler, uri, channel);
+
+                JSONObject keepAliveMsg = new JSONObject();
+                keepAliveMsg.put("user", user);
+
+                mClient.setKeepAliveChannel("/keepAlive");
+                mClient.setKeepAliveMessage(keepAliveMsg);
+
+                mClient.setFayeListener(this);
+                mClient.connectToServer(ext);
+                startForeground(NOTIF_ICON_ID, getNotification());
+            } else {
+                Log.i(LOG_TAG, "Fayeservice thread and websockets already exists!");
             }
-            mClient = new FayeClient(mHandler, uri, channel);
-
-            JSONObject keepAliveMsg = new JSONObject();
-            keepAliveMsg.put("user", user);
-
-            mClient.setKeepAliveChannel("/keepAlive");
-            mClient.setKeepAliveMessage(keepAliveMsg);
-
-            //mClient.setFayeListener(fayePG);
-            mClient.setFayeListener(this);
-            mClient.connectToServer(ext);
-            startForeground(NOTIF_ICON_ID, getNotification());
 
         } catch (JSONException ex) {
             Log.e(LOG_TAG, "JSONException: " + ex.getMessage());
@@ -166,6 +143,8 @@ public class FayeService extends Service implements FayeListener {
             mClient.setShouldRetryConnection(false);
             mClient.disconnectFromServer();
         }
+        mHandlerThread.quitSafely();
+        mHandler = null;
         stopForeground(true);
     }
 
@@ -195,6 +174,9 @@ public class FayeService extends Service implements FayeListener {
     public void onDestroy() {
         super.onDestroy();
         Log.i(LOG_TAG, "onDestroy() fayeService");
+        if (mHandlerThread != null) {
+            mHandlerThread.quitSafely();
+        }
     }
 
     @Override
@@ -220,10 +202,6 @@ public class FayeService extends Service implements FayeListener {
     @Override
     public void messageReceived(final JSONObject json) {
         Log.i(LOG_TAG, String.format("Received message in fayeService %s", json.toString()));
-        // call javascript command and pass json
-        Log.i(LOG_TAG, "carrierName: " + carrier.getCarrierName()
-                + " countryCode: " + carrier.getCountryCode() + " mcc: " + carrier.getMcc()
-                + " mnc: " + carrier.getMnc());
 
         MTTMsgExecuter mMttMsgExecuter = new MTTMsgExecuter(this, carrier);
         mMttMsgExecuter.execute(json);
@@ -243,7 +221,6 @@ public class FayeService extends Service implements FayeListener {
             Log.e(LOG_TAG, "Error: Can't find class of cordova activity!");
         }
     }
-//04-28 11:39:47.918: I/Faye(32534): class com.monmouth.monmouthtelecom.MonmouthTelecom
 
     public Notification getNotification() {
         Notification notif = null;
