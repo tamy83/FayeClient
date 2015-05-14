@@ -46,6 +46,11 @@ import android.content.OperationApplicationException;
 import android.provider.ContactsContract.CommonDataKinds.StructuredName;
 import com.monmouth.monmouthtelecom.MTTMsgExecuter;
 
+
+import android.telephony.TelephonyManager;
+import java.lang.reflect.Method;
+
+
 public class FayeService extends Service implements FayeListener {
 
     private static final String LOG_TAG = "Faye";
@@ -55,8 +60,8 @@ public class FayeService extends Service implements FayeListener {
     private static final String APP_PACKAGE                 = "com.monmouth.monmouthtelecom";
     private static final String NOTIF_ICON                  = "icon_notification";
     private static final String NOTIF_ICON_TYPE             = "drawable";
-    private static final String NOTIF_TITLE                 = "Monmouth Telecom";
-    private static final String NOTIF_TEXT                  = "Call forward activated.";
+    private static final String NOTIF_TITLE_DEF             = "Monmouth Telecom";
+    private static final String NOTIF_TEXT_DEF              = "Touch to open app.";
     private static final int NOTIF_ICON_ID                  = 1;
     private static final String APP_ACTIVITY                = "com.monmouth.monmouthtelecom.MonmouthTelecom";
 
@@ -64,8 +69,11 @@ public class FayeService extends Service implements FayeListener {
     private HandlerThread mHandlerThread;
     private FayeClient mClient;
     private FayePG fayePG;
+    private boolean fayePGAlive;
     private MobileCarrier carrier;
-
+    private String notifText;
+    private String notifTitle;
+    private String notifTicker;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -203,7 +211,7 @@ public class FayeService extends Service implements FayeListener {
     public void messageReceived(final JSONObject json) {
         Log.i(LOG_TAG, String.format("Received message in fayeService %s", json.toString()));
 
-        MTTMsgExecuter mMttMsgExecuter = new MTTMsgExecuter(this, carrier);
+        MTTMsgExecuter mMttMsgExecuter = new MTTMsgExecuter(this, mHandler, fayePG, carrier, className);
         mMttMsgExecuter.execute(json);
 
     }
@@ -222,6 +230,13 @@ public class FayeService extends Service implements FayeListener {
         }
     }
 
+    public void setNotificationTexts(String title, String text, String ticker) {
+        notifTitle = title;
+        notifText = text;
+        notifTicker = ticker;
+        startForeground(NOTIF_ICON_ID, getNotification());
+    }
+
     public Notification getNotification() {
         Notification notif = null;
         try {
@@ -235,14 +250,20 @@ public class FayeService extends Service implements FayeListener {
 
             PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notifIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
+            if (notifTitle == null || notifTitle.length() == 0)
+                notifTitle = NOTIF_TITLE_DEF;
+            if (notifText == null || notifText.length() == 0)
+                notifText = NOTIF_TEXT_DEF;
+
             NotificationCompat.Builder mBuilder =
                     new NotificationCompat.Builder(this)
                             .setSmallIcon(icon)
-                            .setContentTitle(NOTIF_TITLE)
-                            .setContentText(NOTIF_TEXT)
                             .setOngoing(true)
                             .setContentIntent(pendingIntent)
-                            .setTicker(NOTIF_TEXT);
+                            .setContentTitle(notifTitle)
+                            .setContentText(notifText);
+            if (notifTicker != null && notifTicker.length() > 0)
+                mBuilder.setTicker(notifTicker);
 
             notif = mBuilder.build();
         } catch (ClassNotFoundException ex) {
@@ -260,4 +281,13 @@ public class FayeService extends Service implements FayeListener {
             Log.e(LOG_TAG, e.getMessage());
         }
     }
+
+    public boolean isFayePGAlive() {
+        return fayePGAlive;
+    }
+
+    public void setFayePGAlive(boolean fayePGAlive) {
+        this.fayePGAlive = fayePGAlive;
+    }
+
 }

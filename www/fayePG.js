@@ -28,6 +28,11 @@ FayePG.prototype.sendMessage = function(channel, data){
 	window.plugins.FayePG.PInvoke("sendMessage", args, function(msg){console.log(msg)}, function(error){console.log(error)});
 };
 
+FayePG.prototype.setNotifTexts = function(title, text, ticker){
+	var args = [title, text, ticker];
+	window.plugins.FayePG.PInvoke("setNotifTexts", args, function(msg){console.log(msg)}, function(error){console.log(error)});
+};
+
 cordova.addConstructor(function() {
   if (!window.Cordova) {
 	  window.Cordova = cordova;

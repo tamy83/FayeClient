@@ -2,6 +2,9 @@ package com.monmouth.monmouthtelecom;
 
 import org.json.JSONObject;
 import com.monmouth.monmouthtelecom.MobileCarrier;
+
+import android.content.Intent;
+import android.os.Handler;
 import android.util.Log;
 
 import android.database.Cursor;
@@ -23,6 +26,10 @@ import android.content.OperationApplicationException;
 import android.provider.ContactsContract.CommonDataKinds.StructuredName;
 import android.content.Context;
 import org.json.JSONException;
+import com.monmouth.fayePG.FayePG;
+import android.app.Activity;
+
+
 
 public class MTTMsgExecuter {
 
@@ -31,15 +38,21 @@ public class MTTMsgExecuter {
 
     private MobileCarrier carrier;
     private Context context;
+    private Class<?> className;
+    private Handler mHandler;
     private ArrayList<ContentProviderOperation> ops;
-    
-    public MTTMsgExecuter(Context context, MobileCarrier carrier) {
+    private FayePG fayePG;
+
+    // TODO remove context & class (get from fayePG), remove handler?
+    public MTTMsgExecuter(Context context, Handler mHandler, FayePG fayePG, MobileCarrier carrier, Class<?> activityClass) {
         this.carrier = carrier;
         this.context = context;
+        this.className = activityClass;
+        this.mHandler = mHandler;
+        this.fayePG = fayePG;
     }
 
     public void execute(JSONObject fayeMsg) {
-
         try {
             String command = fayeMsg.getString("command");
             Log.i(LOG_TAG, "fayemsg command: " + command);
@@ -48,14 +61,39 @@ public class MTTMsgExecuter {
                 contact.put("phoneNumber", carrier.convertPhoneNumber(contact.getString("phoneNumber")));
                 Log.i(LOG_TAG, "fayemsg contact: " + contact.toString());
                 editContact(contact);
+            } else if (command.equals("OpenApp")) {
+                Activity activity = fayePG.cordova.getActivity();
+                if (activity instanceof MonmouthTelecom) {
+                    if (((MonmouthTelecom) activity).isActivityPaused()) {
+                        Intent notifIntent = new Intent(context, className);
+                        notifIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        Log.i(LOG_TAG, "opening app...");
+                        // store incoming call info into app prefs so js can access
+                        // js checks inc call info to know how to load
+                        context.startActivity(notifIntent);
+                    }
+                }
+                // vvv works!!!
+                //fayePG.webView.sendJavascript("connectedUser = '" + fayeMsg.getString("incomingCall") + "';");
+                //fayePG.webView.sendJavascript(jsCommand +"("+fayeMsg.toString()+");");
+                if (fayePG.getCommand() != null)
+                    fayePG.webView.sendJavascript(fayePG.getCommand() +"("+fayeMsg.toString()+");");
+            } else if (command.equals("Response")) {
+                Log.i(LOG_TAG, "execute response... ");
+                if (fayePG.isActivityAlive()) {
+                    // can use js here
+                    if (fayePG.getCommand() != null)
+                        fayePG.webView.sendJavascript(fayePG.getCommand() +"("+fayeMsg.toString()+");");
+                } else {
+                    Log.d(LOG_TAG, "can't run javascript...");
+                }
             }
         } catch (JSONException ex) {
             Log.e(LOG_TAG, "invalid json");
             Log.e(LOG_TAG, ex.getMessage());
         }
-
-
     }
+
 
     private void editContact(JSONObject contact) throws JSONException {
         boolean contactFound = false;

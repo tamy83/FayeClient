@@ -44,10 +44,12 @@ public class FayePG extends CordovaPlugin {
     private Intent intent;
     private boolean fayeIsBound;
     private MobileCarrier carrier;
+    private boolean activityAlive;
 
     public FayePG() {
         if (DEBUG_MODE)
             logToFile();
+        activityAlive = true;
     }
 
     @Override
@@ -72,10 +74,26 @@ public class FayePG extends CordovaPlugin {
             String channel = args.getString(0);
             JSONObject data = args.getJSONObject(1);
             sendMessage(channel, data, callbackContext);
+        } else if (action.equals("setNotifTexts")) {
+            String title = args.getString(0);
+            String text = args.getString(1);
+            String ticker = args.getString(2);
+            setNotifText(title, text, ticker, callbackContext);
         } else {
             return false;
         }
         return true;
+    }
+
+    private void setNotifText(String notifTitle, String notifText, String notifTicker, CallbackContext callbackContext) {
+        if (!fayeIsBound) {
+            Log.i(LOG_TAG, "FayePG setNotifText: no faye service");
+            callbackContext.error("No faye service.");
+            return;
+        }
+        fayeService.setNotificationTexts(notifTitle, notifText, notifTicker);
+        callbackContext.success();
+
     }
 
     private void init(String address, String user, String sid, CallbackContext callbackContext) {
@@ -152,6 +170,7 @@ public class FayePG extends CordovaPlugin {
         public void onServiceConnected(ComponentName className, IBinder service) {
             fayeService = ((FayeService.FayeBinder)service).getService();
             fayeService.setFaye(FayePG.this);
+            fayeService.setFayePGAlive(activityAlive);
             Log.i(LOG_TAG, "fayeService is bound");
             FayePG.this.cordova.getActivity().getApplicationContext().startService(intent);
         }
@@ -214,6 +233,9 @@ public class FayePG extends CordovaPlugin {
     public void onDestroy() {
         super.onDestroy();
         Log.i(LOG_TAG, "fayePG onDestroy called");
+        activityAlive = false;
+        if (fayeIsBound)
+            fayeService.setFayePGAlive(activityAlive);
     }
 
     private void logToFile() {
@@ -224,6 +246,14 @@ public class FayePG extends CordovaPlugin {
         } catch (IOException e) {
             Log.e(LOG_TAG, e.getMessage());
         }
+    }
+
+    public boolean isActivityAlive() {
+        return activityAlive;
+    }
+
+    public String getCommand() {
+        return command;
     }
 
 }
