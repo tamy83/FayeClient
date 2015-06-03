@@ -23,6 +23,7 @@
 - (void)disconnect:(CDVInvokedUrlCommand*)command;
 - (void)subscribe:(CDVInvokedUrlCommand*)command;
 - (void)sendMessage:(CDVInvokedUrlCommand*)command;
+- (void)setNotifTexts:(CDVInvokedUrlCommand*)command;
 - (void)setAuthTokenFromString:(NSString *)credentialsString;
 
 @end

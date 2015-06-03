@@ -107,4 +107,8 @@
 
 }
 
+- (void)setNotifTexts:(CDVInvokedUrlCommand *)command
+{
+}
+
 @end

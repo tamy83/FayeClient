@@ -61,7 +61,7 @@ public class FayeService extends Service implements FayeListener {
     private static final String NOTIF_ICON                  = "icon_notification";
     private static final String NOTIF_ICON_TYPE             = "drawable";
     private static final String NOTIF_TITLE_DEF             = "Monmouth Telecom";
-    private static final String NOTIF_TEXT_DEF              = "Touch to open app.";
+    private static final String NOTIF_TEXT_DEF              = "Tap to open app.";
     private static final int NOTIF_ICON_ID                  = 1;
     private static final String APP_ACTIVITY                = "com.monmouth.monmouthtelecom.MonmouthTelecom";
 
