@@ -54,6 +54,10 @@
 			<uses-permission android:name="android.permission.INTERNET" />
 		</config-file>
 
+		<config-file target="AndroidManifext.xml" parent="/manifest/application">
+      <service android:exported="false" android:name="com.monmouth.fayePG.FayeService" />
+    </config-file>
+
 		<source-file src="src/android/FayePG.java" target-dir="src/com/monmouth/fayePG" />
 		<source-file src="src/android/FayeService.java" target-dir="src/com/monmouth/fayePG" />
     <source-file src="src/android/MobileCarrier.java" target-dir="src/com/monmouth/MonmouthTelecom" />
