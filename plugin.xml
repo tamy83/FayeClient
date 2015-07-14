@@ -48,9 +48,6 @@
 			<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
 			<!-- com.saulpower.fayeclient -->
-			<uses-sdk 
-				android:minSdkVersion="7"
-				android:targetSdkVersion="17" />
 			<uses-permission android:name="android.permission.INTERNET" />
 		</config-file>
 
