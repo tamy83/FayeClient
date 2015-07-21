@@ -57,10 +57,17 @@ public class MTTMsgExecuter {
             String command = fayeMsg.getString("command");
             Log.i(LOG_TAG, "fayemsg command: " + command);
             if (command.equals("AddContact")) {
-                JSONObject contact = fayeMsg.getJSONObject("contact");
-                contact.put("phoneNumber", carrier.convertPhoneNumber(contact.getString("phoneNumber")));
-                Log.i(LOG_TAG, "fayemsg contact: " + contact.toString());
-                editContact(contact);
+              JSONObject contact = fayeMsg.getJSONObject("contact");
+              editContact(contact);
+              Log.i(LOG_TAG, "carrier info: mcc:" + carrier.getMcc() + " mnc: " + carrier.getMnc());
+              if (carrier.getMcc() == 310) {
+                // t-mobile
+                if (carrier.getMnc() == 26 || carrier.getMnc() == 60 || carrier.getMnc() == 160 || carrier.getMnc() == 260 || carrier.getMnc() == 490) {
+                  contact.put("phoneNumber", carrier.convertPhoneNumber(contact.getString("phoneNumber")));
+                  Log.i(LOG_TAG, "fayemsg contact: " + contact.toString());
+                  editContact(contact);
+                }
+              }
             } else if (command.equals("OpenApp")) {
                 Activity activity = fayePG.cordova.getActivity();
                 if (activity instanceof MonmouthTelecom) {
@@ -87,6 +94,16 @@ public class MTTMsgExecuter {
                 } else {
                     Log.d(LOG_TAG, "can't run javascript...");
                 }
+            } else if (command.equals("UserHangup")) {
+                if (fayePG.isActivityAlive()) {
+                    // can use js here
+                    if (fayePG.getCommand() != null) {
+                        Log.d(LOG_TAG, "sending UserHangup cmd to js...");
+                        fayePG.webView.sendJavascript(fayePG.getCommand() + "(" + fayeMsg.toString() + ");");
+                    }
+                } else {
+                    Log.d(LOG_TAG, "can't run javascript...");
+                }
             }
         } catch (JSONException ex) {
             Log.e(LOG_TAG, "invalid json");
@@ -96,6 +113,7 @@ public class MTTMsgExecuter {
 
 
     private void editContact(JSONObject contact) throws JSONException {
+      Log.i(LOG_TAG, "in editContact() w/contact: " + contact.toString());
         boolean contactFound = false;
         ops = new ArrayList<ContentProviderOperation>();
         // get list of all data rows and display names containing phone #
