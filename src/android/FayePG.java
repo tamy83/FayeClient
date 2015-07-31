@@ -2,6 +2,7 @@ package com.monmouth.fayePG;
 
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
+import org.apache.cordova.PluginResult;
 import android.util.Log;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -28,6 +29,7 @@ import java.io.IOException;
 
 
 
+
 public class FayePG extends CordovaPlugin {
 
     private static final String LOG_TAG                     = "Faye";
@@ -45,8 +47,11 @@ public class FayePG extends CordovaPlugin {
     private boolean fayeIsBound;
     private MobileCarrier carrier;
     private boolean activityAlive;
+    private CallbackContext disconnectCallbackContext = null;
+    private CallbackContext subscribeCallbackContext = null;
 
-    public FayePG() {
+
+  public FayePG() {
         if (DEBUG_MODE)
             logToFile();
         activityAlive = true;
@@ -54,35 +59,35 @@ public class FayePG extends CordovaPlugin {
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
-        if (action.equals("init")){
-            String address = args.getString(0);
-            String credentials = args.getString(1);
-            String user = null, sid = null;
-            String[] credentialsArray = credentials.split(":");
-            if (credentialsArray != null && credentialsArray.length > 1) {
-                user = credentialsArray[0];
-                sid = credentialsArray[1];
-            }
-            init(address, user, sid, callbackContext);
-        } else if (action.equals("disconnect")) {
-            disconnect(callbackContext);
-        } else if (action.equals("subscribe")) {
-            String channel = args.getString(0);
-            String command = args.getString(1);
-            subscribe(channel, command, callbackContext);
-        } else if (action.equals("sendMessage")) {
-            String channel = args.getString(0);
-            JSONObject data = args.getJSONObject(1);
-            sendMessage(channel, data, callbackContext);
-        } else if (action.equals("setNotifTexts")) {
-            String title = args.getString(0);
-            String text = args.getString(1);
-            String ticker = args.getString(2);
-            setNotifText(title, text, ticker, callbackContext);
-        } else {
-            return false;
+      if (action.equals("init")){
+        String address = args.getString(0);
+        String credentials = args.getString(1);
+        String user = null, sid = null;
+        String[] credentialsArray = credentials.split(":");
+        if (credentialsArray != null && credentialsArray.length > 1) {
+          user = credentialsArray[0];
+          sid = credentialsArray[1];
         }
-        return true;
+        init(address, user, sid, callbackContext);
+      } else if (action.equals("disconnect")) {
+        disconnect(callbackContext);
+      } else if (action.equals("subscribe")) {
+        String channel = args.getString(0);
+        String command = args.getString(1);
+        subscribe(channel, command, callbackContext);
+      } else if (action.equals("sendMessage")) {
+        String channel = args.getString(0);
+        JSONObject data = args.getJSONObject(1);
+        sendMessage(channel, data, callbackContext);
+      } else if (action.equals("setNotifTexts")) {
+        String title = args.getString(0);
+        String text = args.getString(1);
+        String ticker = args.getString(2);
+        setNotifText(title, text, ticker, callbackContext);
+      } else {
+        return false;
+      }
+      return true;
     }
 
     private void setNotifText(String notifTitle, String notifText, String notifTicker, CallbackContext callbackContext) {
@@ -121,11 +126,14 @@ public class FayePG extends CordovaPlugin {
     }
 
     private void disconnect(CallbackContext callbackContext) {
-        Log.i(LOG_TAG, "disconnect");
-        fayeService.disconnect();
-        doUnbindService();
-        this.cordova.getActivity().getApplicationContext().stopService(intent);
-        callbackContext.success();
+      Log.i(LOG_TAG, "disconnect");
+      fayeService.disconnect();
+      doUnbindService();
+      this.cordova.getActivity().getApplicationContext().stopService(intent);
+      PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
+      result.setKeepCallback(true);
+      disconnectCallbackContext = callbackContext;
+      disconnectCallbackContext.sendPluginResult(result);
     }
 
     private void subscribe(String channel, String command, CallbackContext callbackContext) {
@@ -150,7 +158,10 @@ public class FayePG extends CordovaPlugin {
             } else {
                 callbackContext.success("Already subscribed.");
             }
-            callbackContext.success();
+            PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
+            result.setKeepCallback(true);
+            subscribeCallbackContext = callbackContext;
+            subscribeCallbackContext.sendPluginResult(result);
         } else {
             callbackContext.error("Need to init before trying to subscribe.");
         }
@@ -255,5 +266,15 @@ public class FayePG extends CordovaPlugin {
     public String getCommand() {
         return command;
     }
+
+
+  public CallbackContext getDisconnectCallbackContext() {
+    return disconnectCallbackContext;
+  }
+
+  public CallbackContext getSubscribeCallbackContext() {
+    return subscribeCallbackContext;
+  }
+
 
 }

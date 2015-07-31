@@ -14,13 +14,13 @@ FayePG.prototype.init = function(address, authToken){
 	window.plugins.FayePG.PInvoke("init", args, function(msg){console.log(msg)}, function(error){console.log(error)});
 };
 
-FayePG.prototype.disconnect = function(){
-		  window.plugins.FayePG.PInvoke("disconnect", null, function(msg){console.log(msg)}, function(error){console.log(error)});
+FayePG.prototype.disconnect = function(successCallback){
+		  window.plugins.FayePG.PInvoke("disconnect", null, successCallback, function(error){console.log(error)});
 };
 
-FayePG.prototype.subscribe = function(channel, commandCallback){
+FayePG.prototype.subscribe = function(channel, commandCallback, successCallback){
   var args = [channel, commandCallback];
-	window.plugins.FayePG.PInvoke("subscribe", args, function(msg){console.log(msg)}, function(error){console.log(error)});
+	window.plugins.FayePG.PInvoke("subscribe", args, successCallback, function(error){console.log(error)});
 };
 
 FayePG.prototype.sendMessage = function(channel, data){

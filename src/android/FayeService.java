@@ -20,6 +20,7 @@ import android.os.Binder;
 import android.app.PendingIntent;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
+import org.apache.cordova.PluginResult;
 import com.monmouth.fayePG.FayePG;
 import android.util.LogPrinter;
 import android.os.HandlerThread;
@@ -55,7 +56,7 @@ public class FayeService extends Service implements FayeListener {
 
     private static final String LOG_TAG = "Faye";
 
-    private static final boolean DEBUG_MODE                 = true;
+    private static final boolean DEBUG_MODE                 = false;
     private static final String LOG_FILE                    = "mttlog";
     private static final String APP_PACKAGE                 = "com.monmouth.monmouthtelecom";
     private static final String NOTIF_ICON                  = "icon_notification";
@@ -194,12 +195,24 @@ public class FayeService extends Service implements FayeListener {
 
     @Override
     public void disconnectedFromServer() {
-        Log.i(LOG_TAG, "Disconnected from Server");
+      String msg = "Disconnected from Server";
+      Log.i(LOG_TAG, msg);
+      if (fayePG.getDisconnectCallbackContext() != null) {
+        PluginResult result = new PluginResult(PluginResult.Status.OK,msg);
+        result.setKeepCallback(false);
+        fayePG.getDisconnectCallbackContext().sendPluginResult(result);
+      }
     }
 
     @Override
     public void subscribedToChannel(String subscription) {
-        Log.i(LOG_TAG, String.format("Subscribed to channel %s.", subscription));
+      String msg = String.format("Subscribed to channel %s.", subscription);
+      Log.i(LOG_TAG, msg);
+      if (fayePG.getSubscribeCallbackContext() != null) {
+        PluginResult result = new PluginResult(PluginResult.Status.OK,msg);
+        result.setKeepCallback(false);
+        fayePG.getSubscribeCallbackContext().sendPluginResult(result);
+      }
     }
 
     @Override

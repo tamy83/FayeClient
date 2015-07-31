@@ -11,13 +11,15 @@
 #import "MZFayeClient.h"
 
 
-@interface FayePG : CDVPlugin {
+@interface FayePG : CDVPlugin <MZFayeClientDelegate> {
     MZFayeClient *mzFayeClient;
 }
 
 @property(nonatomic, retain) MZFayeClient *mzFayeClient;
 @property (nonatomic, strong) NSString *url;
 @property (nonatomic, strong) NSDictionary *authToken;
+@property (nonatomic, strong) NSString* disconnectCallbackId;
+@property (nonatomic, strong) NSString* subscribeCallbackId;
 
 - (void)init:(CDVInvokedUrlCommand*)command;
 - (void)disconnect:(CDVInvokedUrlCommand*)command;

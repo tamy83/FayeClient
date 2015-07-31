@@ -104,6 +104,16 @@ public class MTTMsgExecuter {
                 } else {
                     Log.d(LOG_TAG, "can't run javascript...");
                 }
+            } else if (command.equals("CallStatus")) {
+              if (fayePG.isActivityAlive()) {
+                // can use js here
+                if (fayePG.getCommand() != null) {
+                  Log.d(LOG_TAG, "sending CallStatus cmd to js...");
+                  fayePG.webView.sendJavascript(fayePG.getCommand() + "(" + fayeMsg.toString() + ");");
+                }
+              } else {
+                Log.d(LOG_TAG, "can't run javascript...");
+              }
             }
         } catch (JSONException ex) {
             Log.e(LOG_TAG, "invalid json");
