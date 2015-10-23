@@ -147,14 +147,16 @@ public class FayeService extends Service implements FayeListener {
 
 
     public void disconnect() {
-        Log.i(LOG_TAG, "FayeService disconnect");
-        if (mClient != null) {
-            mClient.setShouldRetryConnection(false);
-            mClient.disconnectFromServer();
-        }
+      Log.i(LOG_TAG, "FayeService disconnect");
+      if (mClient != null) {
+        mClient.setShouldRetryConnection(false);
+        mClient.disconnectFromServer();
+      }
+      if (mHandlerThread != null) {
         mHandlerThread.quitSafely();
-        mHandler = null;
-        stopForeground(true);
+      }
+      mHandler = null;
+      stopForeground(true);
     }
 
     public void subscribe() {
@@ -176,7 +178,7 @@ public class FayeService extends Service implements FayeListener {
 
     void setFaye(FayePG fayePG) {
         this.fayePG = fayePG;
-        setCtxAndClassName();
+        setCtxAndClassName(fayePG);
     }
 
     @Override
@@ -233,14 +235,19 @@ public class FayeService extends Service implements FayeListener {
     private Context ctx;
     private Class<?> className;
 
-    private void setCtxAndClassName() {
-        ctx = fayePG.cordova.getActivity().getApplicationContext();
-        try {
-            className =  Class.forName(fayePG.cordova.getActivity().getComponentName().getClassName());
-            Log.i(LOG_TAG, className.toString());
-        } catch (ClassNotFoundException ex) {
-            Log.e(LOG_TAG, "Error: Can't find class of cordova activity!");
-        }
+    private void setCtxAndClassName(CordovaPlugin cpg) {
+      if (cpg == null) {
+        ctx = null;
+        className = null;
+        return;
+      }
+      ctx = cpg.cordova.getActivity().getApplicationContext();
+      try {
+        className =  Class.forName(cpg.cordova.getActivity().getComponentName().getClassName());
+        Log.i(LOG_TAG, className.toString());
+      } catch (ClassNotFoundException ex) {
+        Log.e(LOG_TAG, "Error: Can't find class of cordova activity!");
+      }
     }
 
     public void setNotificationTexts(String title, String text, String ticker) {
