@@ -28,7 +28,8 @@ import android.content.Context;
 import org.json.JSONException;
 import com.monmouth.fayePG.FayePG;
 import android.app.Activity;
-
+import android.app.Service;
+import com.monmouth.fayePG.FayeService;
 
 
 public class MTTMsgExecuter {
@@ -43,10 +44,10 @@ public class MTTMsgExecuter {
     private ArrayList<ContentProviderOperation> ops;
     private FayePG fayePG;
 
-    // TODO remove context & class (get from fayePG), remove handler?
-    public MTTMsgExecuter(Context context, Handler mHandler, FayePG fayePG, MobileCarrier carrier, Class<?> activityClass) {
+    // TODO remove context & class (get from fayeservice), remove handler?
+    public MTTMsgExecuter(Service service, Handler mHandler, FayePG fayePG, MobileCarrier carrier, Class<?> activityClass) {
         this.carrier = carrier;
-        this.context = context;
+        this.context = service;
         this.className = activityClass;
         this.mHandler = mHandler;
         this.fayePG = fayePG;
@@ -69,25 +70,31 @@ public class MTTMsgExecuter {
                 }
               }
             } else if (command.equals("OpenApp")) {
-                Activity activity = fayePG.cordova.getActivity();
-                if (activity instanceof MonmouthTelecom) {
+                Log.i(LOG_TAG, "opening app...");
+                if (fayePG != null) {
+                  Activity activity = fayePG.cordova.getActivity();
+                  if (activity instanceof MonmouthTelecom) {
                     if (((MonmouthTelecom) activity).isActivityPaused()) {
-                        Intent notifIntent = new Intent(context, className);
-                        notifIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        Log.i(LOG_TAG, "opening app...");
-                        // store incoming call info into app prefs so js can access
-                        // js checks inc call info to know how to load
-                        context.startActivity(notifIntent);
+                      Intent notifIntent = new Intent(context, className);
+                      notifIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                      Log.i(LOG_TAG, "opening app...");
+                      context.startActivity(notifIntent);
                     }
+                  }
+                  if (fayePG.getCommand() != null)
+                    fayePG.webView.sendJavascript(fayePG.getCommand() + "(" + fayeMsg.toString() + ");");
+                } else {
+                  Intent notifIntent = new Intent(context, className);
+                  notifIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                  context.startActivity(notifIntent);
+                  if (context instanceof FayeService) {
+                    FayeService fs = (FayeService) context;
+                    fs.getJsQueue().offer(fs.command + "(" + fayeMsg.toString() + ");");
+                  }
                 }
-                // vvv works!!!
-                //fayePG.webView.sendJavascript("connectedUser = '" + fayeMsg.getString("incomingCall") + "';");
-                //fayePG.webView.sendJavascript(jsCommand +"("+fayeMsg.toString()+");");
-                if (fayePG.getCommand() != null)
-                    fayePG.webView.sendJavascript(fayePG.getCommand() +"("+fayeMsg.toString()+");");
             } else if (command.equals("Response")) {
                 Log.i(LOG_TAG, "execute response... ");
-                if (fayePG.isActivityAlive()) {
+                if (fayePG != null && fayePG.isActivityAlive()) {
                     // can use js here
                     if (fayePG.getCommand() != null)
                         fayePG.webView.sendJavascript(fayePG.getCommand() +"("+fayeMsg.toString()+");");
@@ -95,7 +102,7 @@ public class MTTMsgExecuter {
                     Log.d(LOG_TAG, "can't run javascript...");
                 }
             } else if (command.equals("UserHangup")) {
-                if (fayePG.isActivityAlive()) {
+                if (fayePG != null && fayePG.isActivityAlive()) {
                     // can use js here
                     if (fayePG.getCommand() != null) {
                         Log.d(LOG_TAG, "sending UserHangup cmd to js...");
@@ -105,7 +112,7 @@ public class MTTMsgExecuter {
                     Log.d(LOG_TAG, "can't run javascript...");
                 }
             } else if (command.equals("CallStatus")) {
-              if (fayePG.isActivityAlive()) {
+              if (fayePG != null && fayePG.isActivityAlive()) {
                 // can use js here
                 if (fayePG.getCommand() != null) {
                   Log.d(LOG_TAG, "sending CallStatus cmd to js...");
@@ -129,7 +136,7 @@ public class MTTMsgExecuter {
         // get list of all data rows and display names containing phone #
         String phoneNum = contact.getString("phoneNumber");
         HashMap<Integer, String> existingContacts = getDataRowIds(phoneNum);
-        String fullName = contact.getString("firstName") + " " + contact.getString("lastName");
+        String fullName = (contact.getString("firstName") + " " + contact.getString("lastName")).trim();
         Log.i(LOG_TAG, "contact name: " + fullName);
 
         // check if displaynames == caller id

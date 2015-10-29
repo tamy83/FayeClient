@@ -47,6 +47,9 @@ import android.content.OperationApplicationException;
 import android.provider.ContactsContract.CommonDataKinds.StructuredName;
 import com.monmouth.monmouthtelecom.MTTMsgExecuter;
 
+import java.util.PriorityQueue;
+import java.util.Queue;
+
 
 import android.telephony.TelephonyManager;
 import java.lang.reflect.Method;
@@ -75,7 +78,14 @@ public class FayeService extends Service implements FayeListener {
     private String notifText;
     private String notifTitle;
     private String notifTicker;
+    private Queue<String> jsQueue;
+    public String command;
 
+    @Override
+    public void onCreate() {
+      super.onCreate();
+      jsQueue = new PriorityQueue<String>();
+    }
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         // SSL bug in pre-Gingerbread devices makes websockets currently unusable
@@ -88,13 +98,21 @@ public class FayeService extends Service implements FayeListener {
         try {
             String address = intent.getStringExtra("address");
             String channel = intent.getStringExtra("channel");
+            command = intent.getStringExtra("command");
 
             URI uri = URI.create(address);
 
             String user = intent.getStringExtra("user");
             String sid = intent.getStringExtra("sid");
+            String cls = intent.getStringExtra("class");
 
-            JSONObject ext = new JSONObject();
+            try {
+              className = Class.forName(cls);
+            } catch (ClassNotFoundException e) {
+              Log.e(LOG_TAG, "cannot find class: " + e.getMessage());
+            }
+
+          JSONObject ext = new JSONObject();
             ext.put("user", user);
             ext.put("sid", sid);
 
@@ -147,16 +165,14 @@ public class FayeService extends Service implements FayeListener {
 
 
     public void disconnect() {
-      Log.i(LOG_TAG, "FayeService disconnect");
-      if (mClient != null) {
-        mClient.setShouldRetryConnection(false);
-        mClient.disconnectFromServer();
-      }
-      if (mHandlerThread != null) {
+        Log.i(LOG_TAG, "FayeService disconnect");
+        if (mClient != null) {
+            mClient.setShouldRetryConnection(false);
+            mClient.disconnectFromServer();
+        }
         mHandlerThread.quitSafely();
-      }
-      mHandler = null;
-      stopForeground(true);
+        mHandler = null;
+        stopForeground(true);
     }
 
     public void subscribe() {
@@ -178,7 +194,7 @@ public class FayeService extends Service implements FayeListener {
 
     void setFaye(FayePG fayePG) {
         this.fayePG = fayePG;
-        setCtxAndClassName(fayePG);
+        setCtxAndClassName();
     }
 
     @Override
@@ -199,7 +215,7 @@ public class FayeService extends Service implements FayeListener {
     public void disconnectedFromServer() {
       String msg = "Disconnected from Server";
       Log.i(LOG_TAG, msg);
-      if (fayePG.getDisconnectCallbackContext() != null) {
+      if (fayePG != null && fayePG.getDisconnectCallbackContext() != null) {
         PluginResult result = new PluginResult(PluginResult.Status.OK,msg);
         result.setKeepCallback(false);
         fayePG.getDisconnectCallbackContext().sendPluginResult(result);
@@ -210,7 +226,7 @@ public class FayeService extends Service implements FayeListener {
     public void subscribedToChannel(String subscription) {
       String msg = String.format("Subscribed to channel %s.", subscription);
       Log.i(LOG_TAG, msg);
-      if (fayePG.getSubscribeCallbackContext() != null) {
+      if (fayePG != null && fayePG.getSubscribeCallbackContext() != null) {
         PluginResult result = new PluginResult(PluginResult.Status.OK,msg);
         result.setKeepCallback(false);
         fayePG.getSubscribeCallbackContext().sendPluginResult(result);
@@ -235,19 +251,14 @@ public class FayeService extends Service implements FayeListener {
     private Context ctx;
     private Class<?> className;
 
-    private void setCtxAndClassName(CordovaPlugin cpg) {
-      if (cpg == null) {
-        ctx = null;
-        className = null;
-        return;
-      }
-      ctx = cpg.cordova.getActivity().getApplicationContext();
-      try {
-        className =  Class.forName(cpg.cordova.getActivity().getComponentName().getClassName());
-        Log.i(LOG_TAG, className.toString());
-      } catch (ClassNotFoundException ex) {
-        Log.e(LOG_TAG, "Error: Can't find class of cordova activity!");
-      }
+    private void setCtxAndClassName() {
+        ctx = fayePG.cordova.getActivity().getApplicationContext();
+        try {
+            className =  Class.forName(fayePG.cordova.getActivity().getComponentName().getClassName());
+            Log.i(LOG_TAG, className.toString());
+        } catch (ClassNotFoundException ex) {
+            Log.e(LOG_TAG, "Error: Can't find class of cordova activity!");
+        }
     }
 
     public void setNotificationTexts(String title, String text, String ticker) {
@@ -310,4 +321,7 @@ public class FayeService extends Service implements FayeListener {
         this.fayePGAlive = fayePGAlive;
     }
 
+    public Queue<String> getJsQueue() {
+      return jsQueue;
+    }
 }

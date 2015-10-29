@@ -54,12 +54,8 @@ public class FayePG extends CordovaPlugin {
   public FayePG() {
         if (DEBUG_MODE)
             logToFile();
+        activityAlive = true;
     }
-
-  @Override
-  protected void pluginInitialize() {
-    activityAlive = true;
-  }
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
@@ -95,7 +91,7 @@ public class FayePG extends CordovaPlugin {
     }
 
     private void setNotifText(String notifTitle, String notifText, String notifTicker, CallbackContext callbackContext) {
-        if (fayeService == null) {
+        if (!fayeIsBound) {
             Log.i(LOG_TAG, "FayePG setNotifText: no faye service");
             callbackContext.error("No faye service.");
             return;
@@ -156,7 +152,8 @@ public class FayePG extends CordovaPlugin {
             intent.putExtra("countryCode", carrier.getCountryCode());
             intent.putExtra("mcc", carrier.getMcc());
             intent.putExtra("mnc", carrier.getMnc());
-            if (fayeService == null) {
+            intent.putExtra("class", this.cordova.getClass().getCanonicalName());
+            if (!fayeIsBound) {
                 doBindService();
                 Log.i(LOG_TAG, "subscribe to: " + this.channel + " with command: " + this.command);
             } else {
@@ -173,7 +170,7 @@ public class FayePG extends CordovaPlugin {
 
     private void sendMessage(String channel, JSONObject data, CallbackContext callbackContext) {
         Log.i(LOG_TAG, "sendMessage to: " + channel + " with data: " + data);
-        if (fayeService == null) {
+        if (!fayeIsBound) {
             Log.i(LOG_TAG, "FayePG sendMsg: no faye service");
         } else {
             fayeService.sendMessage(channel, data);
@@ -188,6 +185,12 @@ public class FayePG extends CordovaPlugin {
             fayeService.setFayePGAlive(activityAlive);
             Log.i(LOG_TAG, "fayeService is bound");
             FayePG.this.cordova.getActivity().getApplicationContext().startService(intent);
+            // check jsQueue for any pending commands
+            String js;
+            while ((js = fayeService.getJsQueue().poll()) != null) {
+              Log.i(LOG_TAG, "exec js: " + js);
+              FayePG.this.webView.sendJavascript(js);
+            }
         }
 
         public void onServiceDisconnected(ComponentName className) {
@@ -205,8 +208,6 @@ public class FayePG extends CordovaPlugin {
     void doUnbindService() {
         if (fayeIsBound) {
             Log.i(LOG_TAG, "FayePG unbind");
-            fayeService.setFaye(null);
-            fayeService = null;
             // Detach our existing connection.
             this.cordova.getActivity().getApplicationContext().unbindService(mConnection);
             fayeIsBound = false;
@@ -251,7 +252,7 @@ public class FayePG extends CordovaPlugin {
         super.onDestroy();
         Log.i(LOG_TAG, "fayePG onDestroy called");
         activityAlive = false;
-        if (fayeService != null)
+        if (fayeIsBound)
             fayeService.setFayePGAlive(activityAlive);
     }
 
